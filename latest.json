@@ -1,8 +1,8 @@
 {
-  "version": "1.6.4",
-  "file": "SimpleTimetable-v1.6.4.exe",
-  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.6.4/SimpleTimetable-v1.6.4.exe",
-  "sha256": "da14a2a636b5380c585fdc9fc826d9b0ebf86670141c7f1ef30a81af396b32d2",
-  "size": 38418128,
-  "notes": "다른 컴퓨터에서도 Google Drive Desktop 없이 인터넷으로 직접 업데이트하고 SHA-256 무결성을 검증합니다."
+  "version": "1.6.5",
+  "file": "SimpleTimetable-v1.6.5.exe",
+  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.6.5/SimpleTimetable-v1.6.5.exe",
+  "sha256": "5879a06ff75937b4cec66e3794bab0d2c801b5d5c25bb20dee7a16097eb4e19a",
+  "size": 38420404,
+  "notes": "다른 컴퓨터에서도 Google Drive Desktop 없이 인터넷으로 직접 업데이트하며, manifest 캐시 방지와 SHA-256 검증을 적용했습니다."
 }

@@ -1,8 +1,8 @@
 {
-  "version": "1.6.7",
-  "file": "SimpleTimetable-v1.6.7.exe",
-  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.6.7/SimpleTimetable-v1.6.7.exe",
-  "sha256": "b622cc107ca1446ef377c9118e2030b510eece19d71c6cf13d2f4f1562f287c7",
-  "size": 38423287,
-  "notes": "Popup centering and dialog UI improvements"
+  "version": "1.6.8",
+  "file": "SimpleTimetable-v1.6.8.exe",
+  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.6.8/SimpleTimetable-v1.6.8.exe",
+  "sha256": "2482abb2de68b322f876fda221cddcfb23c99fedc1a34ebb4e6cc68d13e090b5",
+  "size": 38424260,
+  "notes": "PyInstaller onefile 업데이트 재실행 시 보안 검증 오류를 수정했습니다. 부모 프로세스 종료 대기, 환경 초기화, 백업/복구, 교체 재시도 로직을 적용했습니다."
 }

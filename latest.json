@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "1.7.0",
-    "file":  "SimpleTimetable-v1.7.0.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.7.0/SimpleTimetable-v1.7.0.exe",
-    "sha256":  "c56f671dd61efb5e036d4d5d6b5ce20b5ca448718f055d7ddfd074d939bf6eb0",
-    "size":  38450373,
-    "notes":  "v1.7.0: 자정 자동 날짜 전환, 단일 인스턴스 실행 차단, 이전 버전 정리 및 업데이트 안정화."
+    "version":  "1.7.1",
+    "file":  "SimpleTimetable-v1.7.1.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.7.1/SimpleTimetable-v1.7.1.exe",
+    "sha256":  "22afad051fbe08fa452fa4b9fafa96b730cec0d3a6a82aa5b1cb7e52fd1421a3",
+    "size":  38450100,
+    "notes":  "v1.7.1: 한글 문자열 손상 복구, 특수문자 버튼 표기 정리, v1.7.0 기능 유지."
 }

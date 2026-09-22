@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "1.8.0",
-    "file":  "SimpleTimetable-v1.8.0.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.8.0/SimpleTimetable-v1.8.0.exe",
-    "sha256":  "a4da982f6fd932e157a7836bee86c041aef08027e88ca9adeb291ecb1a6d2705",
-    "size":  38453753,
-    "notes":  "v1.8.0: 설정창 UI 전면 개편, 밀성제일고등학교 표기, 일반/표시/시간표/업데이트/고급 메뉴 분리, 교시시간 기본값 복원, 입력 검증 강화, 단일 실행 안정화."
+    "version":  "1.8.1",
+    "file":  "SimpleTimetable-v1.8.1.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.8.1/SimpleTimetable-v1.8.1.exe",
+    "sha256":  "7ca2297f2e0064453749da10a96baf83a368b394c063e82fd2f4cf8f2919a992",
+    "size":  38457284,
+    "notes":  "v1.8.1: 자동 업데이트 확인, 마지막 확인 시각, 다운로드 진행률 표시, 기존 SHA-256 검증/백업/롤백/자동 재실행 유지."
 }

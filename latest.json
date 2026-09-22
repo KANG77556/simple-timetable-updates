@@ -1,8 +1,8 @@
-{
-  "version": "1.6.9",
-  "file": "SimpleTimetable-v1.6.9.exe",
-  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.6.9/SimpleTimetable-v1.6.9.exe",
-  "sha256": "da977bef703e904755e3f884d4d9f84952f8e7dcf0c0a571af80d8be96b5a1ab",
-  "size": 161648161,
-  "notes": "전환용 네이티브 업데이트 부트스트랩입니다. 실행 후 실제 본체 v1.6.10으로 자동 교체됩니다."
+﻿{
+    "version":  "1.7.0",
+    "file":  "SimpleTimetable-v1.7.0.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.7.0/SimpleTimetable-v1.7.0.exe",
+    "sha256":  "c56f671dd61efb5e036d4d5d6b5ce20b5ca448718f055d7ddfd074d939bf6eb0",
+    "size":  38450373,
+    "notes":  "v1.7.0: 자정 자동 날짜 전환, 단일 인스턴스 실행 차단, 이전 버전 정리 및 업데이트 안정화."
 }

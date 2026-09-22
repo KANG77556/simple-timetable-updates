@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "1.8.1",
-    "file":  "SimpleTimetable-v1.8.1.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.8.1/SimpleTimetable-v1.8.1.exe",
-    "sha256":  "7ca2297f2e0064453749da10a96baf83a368b394c063e82fd2f4cf8f2919a992",
-    "size":  38457284,
-    "notes":  "v1.8.1: 자동 업데이트 확인, 마지막 확인 시각, 다운로드 진행률 표시, 기존 SHA-256 검증/백업/롤백/자동 재실행 유지."
+    "version":  "1.8.2",
+    "file":  "SimpleTimetable-v1.8.2.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.8.2/SimpleTimetable-v1.8.2.exe",
+    "sha256":  "9144982fbd6548d0137dc8246afb9e79c89e8a4dff9ae87f156b0d0b684bc301",
+    "size":  38457141,
+    "notes":  "v1.8.2: 날짜 이동 버튼을 도형형 UI로 간소화(이전주/이전날/날짜선택/다음날/다음주), 툴팁 추가, 기존 기능 유지."
 }

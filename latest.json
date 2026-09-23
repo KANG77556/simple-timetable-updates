@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.1.1",
-    "file":  "SimpleTimetable-v2.1.1.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.1/SimpleTimetable-v2.1.1.exe",
-    "sha256":  "bbd0123db89ed02d571de8cc7a3f1e7a26c2b1e6dc2f248a02e6444d0ed6dc98",
-    "size":  21608247,
-    "notes":  "v2.1.1: 업데이트 후 새 프로그램이 나타나지 않는 문제 수정. 단일 인스턴스 mutex 선해제, PyInstaller 환경 정리, 재실행 확인 및 재시도 추가."
+    "version":  "2.1.2",
+    "file":  "SimpleTimetable-v2.1.2.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.2/SimpleTimetable-v2.1.2.exe",
+    "sha256":  "ea86a70437d209e370635bac082b50cf10f1e5113f8d61e3b6f97d39ded47494",
+    "size":  21608292,
+    "notes":  "v2.1.2: 업데이트 안정성 수정. PyInstaller 부모/자식 프로세스 완전 종료 및 파일 잠금 해제 후 교체, 백업/무결성/재실행 검증 강화."
 }

@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.1.0",
-    "file":  "SimpleTimetable-v2.1.0.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.0/SimpleTimetable-v2.1.0.exe",
-    "sha256":  "c43a24d6b0a1624477562fa5dbbd579c0681991bbb2da72abf2d1cc2528e18e0",
-    "size":  21607398,
-    "notes":  "v2.1.0: 우측 하단 반투명 시간표 위젯, 수업 없는 교시 자동 제외, 현재 수업 강조, 다음 수업 남은 시간, 전체 업무창 분리, 기존 메모/TODO/캘린더/통합검색 유지."
+    "version":  "2.1.1",
+    "file":  "SimpleTimetable-v2.1.1.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.1/SimpleTimetable-v2.1.1.exe",
+    "sha256":  "bbd0123db89ed02d571de8cc7a3f1e7a26c2b1e6dc2f248a02e6444d0ed6dc98",
+    "size":  21608247,
+    "notes":  "v2.1.1: 업데이트 후 새 프로그램이 나타나지 않는 문제 수정. 단일 인스턴스 mutex 선해제, PyInstaller 환경 정리, 재실행 확인 및 재시도 추가."
 }

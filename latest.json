@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "1.8.2",
-    "file":  "SimpleTimetable-v1.8.2.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v1.8.2/SimpleTimetable-v1.8.2.exe",
-    "sha256":  "9144982fbd6548d0137dc8246afb9e79c89e8a4dff9ae87f156b0d0b684bc301",
-    "size":  38457141,
-    "notes":  "v1.8.2: 날짜 이동 버튼을 도형형 UI로 간소화(이전주/이전날/날짜선택/다음날/다음주), 툴팁 추가, 기존 기능 유지."
+    "version":  "2.0.0",
+    "file":  "SimpleTimetable-v2.0.0.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.0.0/SimpleTimetable-v2.0.0.exe",
+    "sha256":  "3ba479eb68df329dd5aa929dc48ab8e787ccb3fe3427f2acb2d0b129e308103b",
+    "size":  21604537,
+    "notes":  "v2.0.0: 프리미엄 업무 대시보드, 통합검색, 리치 메모/파일첨부, TODO 반복/리마인더/Windows 알림, 캘린더/Google 연동, 공유 기능, UI 전면 고도화."
 }

@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "2.0.0",
-    "file":  "SimpleTimetable-v2.0.0.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.0.0/SimpleTimetable-v2.0.0.exe",
-    "sha256":  "fe67706f8b53367c89f4b0c525da872400a0cd90c07a51b1bf2102bb959161bb",
-    "size":  21604023,
-    "notes":  "v2.0.0: 프리미엄 업무 대시보드, 통합검색, 리치 메모/파일첨부, TODO 반복/리마인더/Windows 알림, 캘린더/Google 연동, 공유 기능, UI 전면 고도화."
+    "version":  "2.1.0",
+    "file":  "SimpleTimetable-v2.1.0.exe",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.0/SimpleTimetable-v2.1.0.exe",
+    "sha256":  "c43a24d6b0a1624477562fa5dbbd579c0681991bbb2da72abf2d1cc2528e18e0",
+    "size":  21607398,
+    "notes":  "v2.1.0: 우측 하단 반투명 시간표 위젯, 수업 없는 교시 자동 제외, 현재 수업 강조, 다음 수업 남은 시간, 전체 업무창 분리, 기존 메모/TODO/캘린더/통합검색 유지."
 }

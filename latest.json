@@ -2,7 +2,7 @@
     "version":  "2.0.0",
     "file":  "SimpleTimetable-v2.0.0.exe",
     "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.0.0/SimpleTimetable-v2.0.0.exe",
-    "sha256":  "3ba479eb68df329dd5aa929dc48ab8e787ccb3fe3427f2acb2d0b129e308103b",
-    "size":  21604537,
+    "sha256":  "fe67706f8b53367c89f4b0c525da872400a0cd90c07a51b1bf2102bb959161bb",
+    "size":  21604023,
     "notes":  "v2.0.0: 프리미엄 업무 대시보드, 통합검색, 리치 메모/파일첨부, TODO 반복/리마인더/Windows 알림, 캘린더/Google 연동, 공유 기능, UI 전면 고도화."
 }

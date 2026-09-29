@@ -33,6 +33,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix ".preview"
+            versionNameSuffix "-preview"
+        }
         release {
             minifyEnabled false
             if (releaseKeystorePath) {

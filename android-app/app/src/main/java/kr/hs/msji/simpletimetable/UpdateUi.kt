@@ -1,6 +1,8 @@
 package kr.hs.msji.simpletimetable
 
 import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -12,6 +14,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun UpdateAction() {
@@ -20,6 +23,22 @@ fun UpdateAction() {
     var checking by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<UpdateInfo?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var pendingApk by remember { mutableStateOf<File?>(null) }
+
+    val installPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        val host = activity
+        val apk = pendingApk
+        if (host != null && apk != null) {
+            if (AppUpdateManager.canInstallPackages(host)) {
+                AppUpdateManager.install(host, apk)
+                pendingApk = null
+            } else {
+                message = "설치를 계속하려면 이 앱의 '알 수 없는 앱 설치' 권한을 허용해 주세요."
+            }
+        }
+    }
 
     TextButton(
         enabled = !checking,
@@ -56,12 +75,7 @@ fun UpdateAction() {
         AlertDialog(
             onDismissRequest = { if (!checking) info = null },
             title = { Text("새 버전 v${update.versionName}") },
-            text = {
-                Text(
-                    if (update.notes.isBlank()) "새 버전을 설치할 수 있습니다."
-                    else update.notes
-                )
-            },
+            text = { Text(update.notes.ifBlank { "새 버전을 설치할 수 있습니다." }) },
             confirmButton = {
                 TextButton(
                     enabled = !checking,
@@ -73,12 +87,20 @@ fun UpdateAction() {
                         } else {
                             scope.launch {
                                 checking = true
-                                val result = AppUpdateManager.download(host, update)
-                                result.onSuccess { apk ->
-                                    AppUpdateManager.install(host, apk)
-                                }.onFailure {
-                                    message = it.message ?: "업데이트 다운로드에 실패했습니다."
-                                }
+                                AppUpdateManager.download(host, update)
+                                    .onSuccess { apk ->
+                                        if (AppUpdateManager.canInstallPackages(host)) {
+                                            AppUpdateManager.install(host, apk)
+                                        } else {
+                                            pendingApk = apk
+                                            installPermissionLauncher.launch(
+                                                AppUpdateManager.createUnknownSourcesIntent(host)
+                                            )
+                                        }
+                                    }
+                                    .onFailure {
+                                        message = it.message ?: "업데이트 다운로드에 실패했습니다."
+                                    }
                                 checking = false
                                 info = null
                             }
@@ -89,10 +111,9 @@ fun UpdateAction() {
                 }
             },
             dismissButton = {
-                TextButton(
-                    enabled = !checking,
-                    onClick = { info = null }
-                ) { Text("나중에") }
+                TextButton(enabled = !checking, onClick = { info = null }) {
+                    Text("나중에")
+                }
             }
         )
     }

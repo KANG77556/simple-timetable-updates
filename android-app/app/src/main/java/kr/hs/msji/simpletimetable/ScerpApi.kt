@@ -69,14 +69,37 @@ class ScerpApi(private val store: LocalStore? = null) {
         )
     }
 
-    fun fetchMyTimetable(date: String, userId: String): List<TimetableItem> {
+    private fun normalizeTeacherName(value: String): String =
+        value
+            .trim()
+            .replace("선생님", "")
+            .replace("교사", "")
+            .replace(Regex("\\s+"), "")
+            .lowercase()
+
+    private fun teacherMatches(displayName: String, teacherAlias: String): Boolean {
+        val profile = normalizeTeacherName(displayName)
+        val alias = normalizeTeacherName(teacherAlias)
+        if (profile.isBlank() || alias.isBlank()) return false
+        if (profile == alias) return true
+        val shorter = minOf(profile.length, alias.length)
+        return shorter >= 2 && (profile.startsWith(alias) || alias.startsWith(profile))
+    }
+
+    fun fetchMyTimetable(date: String, userId: String, displayName: String = ""): List<TimetableItem> {
         val q = "?from=${URLEncoder.encode(date, "UTF-8")}&to=${URLEncoder.encode(date, "UTF-8")}"
         val arr = request("/api/timetable$q").optJSONArray("data") ?: JSONArray()
         return buildList {
             for (i in 0 until arr.length()) {
                 val row = arr.optJSONObject(i) ?: continue
                 val rowUserId = row.optString("teacher_user_id", row.optString("teacherUserId"))
-                if (rowUserId != userId) continue
+                val teacherAlias = row.optString("teacher_alias", row.optString("teacherAlias"))
+                val matchesUser = if (rowUserId.isNotBlank()) {
+                    rowUserId == userId
+                } else {
+                    teacherMatches(displayName, teacherAlias)
+                }
+                if (!matchesUser) continue
                 val period = row.optInt("period", 0)
                 if (period !in 1..7) continue
                 add(TimetableItem(
@@ -85,6 +108,7 @@ class ScerpApi(private val store: LocalStore? = null) {
                     classCode = row.optString("class_code", row.optString("classCode")),
                     period = period,
                     subject = row.optString("subject"),
+                    teacher = teacherAlias,
                     room = row.optString("room"),
                     startTime = row.optString("start_time", row.optString("startTime")),
                     endTime = row.optString("end_time", row.optString("endTime"))

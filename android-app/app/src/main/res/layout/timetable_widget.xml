@@ -1,0 +1,94 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="#E60E1726">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SCERP · 오늘"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/widget_refresh"
+            android:layout_width="36dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="↻"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:contentDescription="위젯 새로고침" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="시간표를 불러오는 중..."
+        android:textColor="#7FE0BA"
+        android:textStyle="bold"
+        android:textSize="17sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text=""
+        android:textColor="#B9C9DD"
+        android:textSize="12sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_rows"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:text=""
+        android:textColor="#EAF1FA"
+        android:textSize="12sp"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="7" />
+
+    <TextView
+        android:id="@+id/widget_summary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:paddingTop="5dp"
+        android:text="할 일·일정 없음"
+        android:textColor="#B9C9DD"
+        android:textSize="11sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_open"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:text="SCERP 열기"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="12sp"
+        android:background="#26384F" />
+</LinearLayout>

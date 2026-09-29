@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -135,7 +136,11 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 28.dp),
+            Modifier
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
             Text(

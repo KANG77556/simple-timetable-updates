@@ -1,7 +1,7 @@
 {
-  "versionCode": 16,
-  "versionName": "0.3.10",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.10/SCERP-Android-v0.3.10.apk",
-  "sha256": "d050a954623e5d905bc6ca7cd3d990d5bfecb5524be28404bd7f4fd56e87216f",
-  "notes": "v0.3.10: 교사 시간표 매칭을 강화했고, 기존 v0.3.9와 동일한 앱 서명으로 다시 배포해 업데이트 설치 호환성을 복구했습니다."
+  "versionCode": 19,
+  "versionName": "0.3.13",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.13/MilseongJeil-v0.3.13.apk",
+  "sha256": "80046811cfba3bc5e44439b0abdd91ac5cfe4f4697f21368f62dae793bab7326",
+  "notes": "v0.3.13: 밀성제일고 앱의 안정 패키지와 고정 서명 기준을 설정했습니다. 이 버전부터 같은 패키지와 서명으로 이후 버전을 인앱 업데이트할 수 있습니다."
 }

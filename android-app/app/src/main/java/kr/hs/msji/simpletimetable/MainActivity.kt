@@ -160,8 +160,16 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
         ) {
             Column(Modifier.padding(18.dp)) {
                 val headline = when {
-                    status.current != null -> "${status.current.period}교시 · ${status.current.subject}"
-                    status.next != null -> "다음 ${status.next.period}교시 · ${status.next.subject}"
+                    status.current != null -> listOf(
+                        "${status.current.period}교시",
+                        status.current.subject,
+                        status.current.classCode
+                    ).filter { it.isNotBlank() }.joinToString(" · ")
+                    status.next != null -> "다음 " + listOf(
+                        "${status.next.period}교시",
+                        status.next.subject,
+                        status.next.classCode
+                    ).filter { it.isNotBlank() }.joinToString(" · ")
                     state.myTimetable.isEmpty() -> "오늘 수업 없음"
                     else -> "오늘 수업 종료"
                 }
@@ -214,7 +222,7 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             Column(Modifier.weight(1f)) {
                                 Text(row.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 val time = listOf(row.startTime.take(5), row.endTime.take(5)).filter { it.isNotBlank() }.joinToString(" ~ ")
-                                Text(listOf(time, row.room).filter { it.isNotBlank() }.joinToString(" · "))
+                                Text(listOf(row.classCode, time, row.room).filter { it.isNotBlank() }.joinToString(" · "))
                             }
                             if (active) {
                                 AssistChip(onClick = {}, label = { Text("현재") })

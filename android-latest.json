@@ -1,7 +1,7 @@
 {
-  "versionCode": 10,
-  "versionName": "0.3.4",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.4/SCERP-Android-v0.3.4.apk",
-  "sha256": "72b17eefdaf30d5caa9ce869a9c850f7044017d88fc06feb6b5808c244619027",
-  "notes": "v0.3.4: 오늘 시간표의 현재 수업 카드와 각 교시 카드에 학급/교실(classCode)을 표시하고, 홈 화면 위젯에도 학급/교실 정보를 함께 표시합니다."
+  "versionCode": 11,
+  "versionName": "0.3.5",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.5/SCERP-Android-v0.3.5.apk",
+  "sha256": "ebf007ef9f24a419ba781e4f8d7950fb1af26aed37bb40fa577e7ea639fc6ad3",
+  "notes": "v0.3.5: 오늘 시간표에서 학년 정보를 함께 표시하고, 하단 메뉴의 문자형 표시를 홈·전체·메모·TODO·캘린더·방송 아이콘으로 교체했습니다."
 }

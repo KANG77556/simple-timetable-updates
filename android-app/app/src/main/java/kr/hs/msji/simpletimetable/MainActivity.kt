@@ -14,6 +14,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +51,19 @@ class MainActivity : ComponentActivity() {
 
 enum class AppTab(val label: String) {
     TODAY("오늘"), ALL("전체"), MEMO("메모"), TODO("TODO"), CALENDAR("캘린더"), BROADCAST("방송")
+}
+
+@Composable
+private fun AppTabIcon(tab: AppTab) {
+    val image = when (tab) {
+        AppTab.TODAY -> Icons.Filled.Home
+        AppTab.ALL -> Icons.Filled.List
+        AppTab.MEMO -> Icons.Filled.Edit
+        AppTab.TODO -> Icons.Filled.CheckCircle
+        AppTab.CALENDAR -> Icons.Filled.DateRange
+        AppTab.BROADCAST -> Icons.Filled.Notifications
+    }
+    Icon(imageVector = image, contentDescription = tab.label)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,7 +102,7 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                             if (item == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
                             if (item == AppTab.BROADCAST && state.classrooms.isEmpty()) vm.loadClassrooms()
                         },
-                        icon = { Text(item.label.take(1)) },
+                        icon = { AppTabIcon(item) },
                         label = { Text(item.label) }
                     )
                 }
@@ -163,12 +183,12 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                     status.current != null -> listOf(
                         "${status.current.period}교시",
                         status.current.subject,
-                        status.current.classCode
+                        listOf(status.current.grade.takeIf { it > 0 }?.let { "${it}학년" }, status.current.classCode).filterNotNull().filter { it.isNotBlank() }.joinToString(" ")
                     ).filter { it.isNotBlank() }.joinToString(" · ")
                     status.next != null -> "다음 " + listOf(
                         "${status.next.period}교시",
                         status.next.subject,
-                        status.next.classCode
+                        listOf(status.next.grade.takeIf { it > 0 }?.let { "${it}학년" }, status.next.classCode).filterNotNull().filter { it.isNotBlank() }.joinToString(" ")
                     ).filter { it.isNotBlank() }.joinToString(" · ")
                     state.myTimetable.isEmpty() -> "오늘 수업 없음"
                     else -> "오늘 수업 종료"
@@ -222,7 +242,11 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             Column(Modifier.weight(1f)) {
                                 Text(row.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 val time = listOf(row.startTime.take(5), row.endTime.take(5)).filter { it.isNotBlank() }.joinToString(" ~ ")
-                                Text(listOf(row.classCode, time, row.room).filter { it.isNotBlank() }.joinToString(" · "))
+                                val gradeClass = listOf(
+                                    row.grade.takeIf { it > 0 }?.let { "${it}학년" },
+                                    row.classCode.takeIf { it.isNotBlank() }
+                                ).filterNotNull().joinToString(" ")
+                                Text(listOf(gradeClass, time, row.room).filter { it.isNotBlank() }.joinToString(" · "))
                             }
                             if (active) {
                                 AssistChip(onClick = {}, label = { Text("현재") })

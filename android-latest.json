@@ -1,7 +1,7 @@
 {
-  "versionCode": 7,
-  "versionName": "0.3.1",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.1/SCERP-Android-v0.3.1.apk",
-  "sha256": "1e1c30be12b384375dcd3ca7fe8eb7fd9dbd6d13a2b5a547a84c6504eb3fd6f6",
-  "notes": "v0.3.1: 앱 내 업데이트 기능 추가, APK 다운로드 및 SHA-256 무결성 검증, 설치 화면 연결, 시간표 위젯 기능 강화."
+  "versionCode": 8,
+  "versionName": "0.3.2",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.2/SCERP-Android-v0.3.2.apk",
+  "sha256": "8989c1098a8feb0442d97f1a436828b0fbc1b26cba732099cf34eeb8782d10dd",
+  "notes": "v0.3.2: 앱 내 업데이트 안정화. 알 수 없는 앱 설치 권한 허용 후 기존에 받은 APK 설치를 자동으로 이어서 진행하며, 시간표 위젯 강화 기능을 포함합니다."
 }

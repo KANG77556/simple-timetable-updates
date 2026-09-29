@@ -1,7 +1,7 @@
 {
-  "versionCode": 9,
-  "versionName": "0.3.3",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.3/SCERP-Android-v0.3.3.apk",
-  "sha256": "105f1f5e012c209d23c716bb563909cac127d450f930e7a31e8b3905a2b60126",
-  "notes": "v0.3.3: 앱 실행 시 24시간 간격 자동 업데이트 확인, 새 버전 NEW 배지와 대상 버전 표시, 현재 설치 버전 표시, APK 무결성 검증 및 설치 권한 허용 후 자동 재개 지원."
+  "versionCode": 10,
+  "versionName": "0.3.4",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.4/SCERP-Android-v0.3.4.apk",
+  "sha256": "72b17eefdaf30d5caa9ce869a9c850f7044017d88fc06feb6b5808c244619027",
+  "notes": "v0.3.4: 오늘 시간표의 현재 수업 카드와 각 교시 카드에 학급/교실(classCode)을 표시하고, 홈 화면 위젯에도 학급/교실 정보를 함께 표시합니다."
 }

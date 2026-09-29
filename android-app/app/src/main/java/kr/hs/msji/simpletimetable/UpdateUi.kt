@@ -4,9 +4,12 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,12 +21,44 @@ import java.io.File
 
 @Composable
 fun UpdateAction() {
-    val activity = LocalContext.current as? Activity
+    val context = LocalContext.current
+    val activity = context as? Activity
     val scope = rememberCoroutineScope()
+    val prefs = remember {
+        context.getSharedPreferences("app_update", Activity.MODE_PRIVATE)
+    }
+
     var checking by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<UpdateInfo?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var pendingApk by remember { mutableStateOf<File?>(null) }
+
+    suspend fun checkUpdate(showLatestMessage: Boolean, showErrors: Boolean) {
+        if (checking) return
+        checking = true
+        when (val result = AppUpdateManager.check()) {
+            UpdateCheckResult.Latest -> {
+                info = null
+                if (showLatestMessage) {
+                    message = "현재 최신 버전입니다. (v${BuildConfig.VERSION_NAME})"
+                }
+            }
+            is UpdateCheckResult.Available -> info = result.info
+            is UpdateCheckResult.Error -> {
+                if (showErrors) message = result.message
+            }
+        }
+        prefs.edit().putLong("last_check_ms", System.currentTimeMillis()).apply()
+        checking = false
+    }
+
+    LaunchedEffect(Unit) {
+        val last = prefs.getLong("last_check_ms", 0L)
+        val elapsed = System.currentTimeMillis() - last
+        if (last == 0L || elapsed >= 24L * 60L * 60L * 1000L) {
+            checkUpdate(showLatestMessage = false, showErrors = false)
+        }
+    }
 
     val installPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -40,24 +75,34 @@ fun UpdateAction() {
         }
     }
 
-    TextButton(
-        enabled = !checking,
-        onClick = {
-            scope.launch {
-                checking = true
-                when (val result = AppUpdateManager.check()) {
-                    UpdateCheckResult.Latest ->
-                        message = "현재 최신 버전입니다. (v${BuildConfig.VERSION_NAME})"
-                    is UpdateCheckResult.Available ->
-                        info = result.info
-                    is UpdateCheckResult.Error ->
-                        message = result.message
-                }
-                checking = false
+    BadgedBox(
+        badge = {
+            if (info != null) {
+                Badge { Text("NEW") }
             }
         }
     ) {
-        Text(if (checking) "확인 중…" else "업데이트")
+        TextButton(
+            enabled = !checking,
+            onClick = {
+                val available = info
+                if (available != null) {
+                    info = available
+                } else {
+                    scope.launch {
+                        checkUpdate(showLatestMessage = true, showErrors = true)
+                    }
+                }
+            }
+        ) {
+            Text(
+                when {
+                    checking -> "확인 중…"
+                    info != null -> "업데이트 v${info!!.versionName}"
+                    else -> "업데이트"
+                }
+            )
+        }
     }
 
     message?.let { text ->

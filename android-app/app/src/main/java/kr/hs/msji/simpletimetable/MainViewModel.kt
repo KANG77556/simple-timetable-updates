@@ -64,7 +64,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun refreshTodayDirect(userId: String) {
         val before = _state.value.myTimetable
-        val rows = api.fetchMyTimetable(_state.value.today, userId)
+        val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
+        val rows = api.fetchMyTimetable(_state.value.today, userId, displayName)
         val changed = before.isNotEmpty() && before != rows
         store.latestTimetableJson = encodeTimetable(rows)
         TimetableWidget.updateAll(getApplication())

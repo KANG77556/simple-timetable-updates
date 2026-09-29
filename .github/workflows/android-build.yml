@@ -7,9 +7,6 @@ on:
       - 'android-app/**'
       - '.github/workflows/android-build.yml'
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,63 +43,3 @@ jobs:
         with:
           name: SCERP-Android-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Prepare release metadata
-        if: github.ref == 'refs/heads/main'
-        id: release_meta
-        run: |
-          VERSION_NAME="$(jq -r '.elements[0].versionName' app/build/outputs/apk/debug/output-metadata.json)"
-          VERSION_CODE="$(jq -r '.elements[0].versionCode' app/build/outputs/apk/debug/output-metadata.json)"
-          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
-          APK_NAME="SCERP-Android-v${VERSION_NAME}.apk"
-          SHA256="$(sha256sum "$APK_PATH" | awk '{print $1}')"
-          cp "$APK_PATH" "/tmp/$APK_NAME"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
-          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
-
-      - name: Publish GitHub release
-        if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION_NAME: ${{ steps.release_meta.outputs.version_name }}
-          APK_NAME: ${{ steps.release_meta.outputs.apk_name }}
-        run: |
-          TAG="android-v$VERSION_NAME"
-          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$TAG" "/tmp/$APK_NAME" --repo "${{ github.repository }}" --clobber
-          else
-            gh release create "$TAG" "/tmp/$APK_NAME" \
-              --repo "${{ github.repository }}" \
-              --title "Android v$VERSION_NAME" \
-              --notes "SimpleTimetable Android v$VERSION_NAME"
-          fi
-
-      - name: Update Android update channel
-        if: github.ref == 'refs/heads/main'
-        env:
-          VERSION_NAME: ${{ steps.release_meta.outputs.version_name }}
-          VERSION_CODE: ${{ steps.release_meta.outputs.version_code }}
-          APK_NAME: ${{ steps.release_meta.outputs.apk_name }}
-          SHA256: ${{ steps.release_meta.outputs.sha256 }}
-        run: |
-          cat > ../android-latest.json <<EOF
-          {
-            "versionCode": $VERSION_CODE,
-            "versionName": "$VERSION_NAME",
-            "apkUrl": "https://github.com/${{ github.repository }}/releases/download/android-v$VERSION_NAME/$APK_NAME",
-            "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 교사 시간표 매칭을 강화하고, 개인 시간표 조회 실패 시 전체 학급 시간표에서 교사명으로 다시 확인하도록 수정했습니다."
-          }
-          EOF
-          cd ..
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add android-latest.json
-          if git diff --cached --quiet; then
-            echo "android-latest.json already up to date"
-          else
-            git commit -m "chore(android): publish v$VERSION_NAME update channel [skip ci]"
-            git push
-          fi

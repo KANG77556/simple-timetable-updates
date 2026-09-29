@@ -130,11 +130,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             block()
         } catch (e: Exception) {
-            val message = e.message ?: "오류가 발생했습니다."
-            val authExpired = message.contains("로그인", ignoreCase = true) ||
-                message.contains("authentication", ignoreCase = true) ||
-                message.contains("authentication_required", ignoreCase = true)
-            if (authExpired) {
+            val apiError = e as? ScerpApiException
+            if (apiError?.code == "authentication_required") {
                 store.clearSession()
                 _state.value = _state.value.copy(
                     loggedIn = false,
@@ -142,7 +139,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
                 )
             } else {
-                _state.value = _state.value.copy(message = message)
+                _state.value = _state.value.copy(
+                    message = apiError?.message ?: e.message ?: "오류가 발생했습니다."
+                )
             }
         } finally {
             _state.value = _state.value.copy(loading = false)

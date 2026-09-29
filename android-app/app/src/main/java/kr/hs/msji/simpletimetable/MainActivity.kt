@@ -1068,8 +1068,6 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
         } else {
             Spacer(Modifier.height(16.dp))
             Surface(

@@ -1,7 +1,7 @@
 {
-  "versionCode": 12,
-  "versionName": "0.3.6",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.6/SCERP-Android-v0.3.6.apk",
-  "sha256": "3f1a01ea43236aa3c94a6553433160fb55a44a3febc17355031daf4b7318fc2e",
-  "notes": "v0.3.6: 전체 학년·반 시간표 화면을 모바일 중심으로 재설계했습니다. 학년 선택, 학급 선택, 선택 학급의 교시별 카드형 시간표로 단순화하고 긴 7교시 정보가 화면을 과도하게 늘리지 않도록 정리했습니다."
+  "versionCode": 13,
+  "versionName": "0.3.7",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.7/SCERP-Android-v0.3.7.apk",
+  "sha256": "4c77f018cb3dba2204716e85d1e548976860aedcedf4297ae9a66281cebb1f73",
+  "notes": "v0.3.7: 앱 재시작 후 로그인 표시만 남고 SCERP 인증 세션이 사라져 전자칠판 방송에서 '로그인이 필요합니다'가 발생하던 문제를 수정했습니다. 로그인 쿠키를 안전하게 복원하고 세션 만료 시 로그인 화면으로 전환합니다."
 }

@@ -26,11 +26,11 @@ data class AppUiState(
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val api = ScerpApi()
     private val store = LocalStore(application)
+    private val api = ScerpApi(store)
     private val _state = MutableStateFlow(
         AppUiState(
-            loggedIn = store.userId.isNotBlank(),
+            loggedIn = store.userId.isNotBlank() && store.sessionCookie.isNotBlank(),
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = store.loadMemos(),
@@ -124,7 +124,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             block()
         } catch (e: Exception) {
-            _state.value = _state.value.copy(message = e.message ?: "?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.")
+            val message = e.message ?: "오류가 발생했습니다."
+            val authExpired = message.contains("로그인", ignoreCase = true) ||
+                message.contains("authentication", ignoreCase = true) ||
+                message.contains("authentication_required", ignoreCase = true)
+            if (authExpired) {
+                store.clearSession()
+                _state.value = _state.value.copy(
+                    loggedIn = false,
+                    classrooms = emptyList(),
+                    message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
+                )
+            } else {
+                _state.value = _state.value.copy(message = message)
+            }
         } finally {
             _state.value = _state.value.copy(loading = false)
         }

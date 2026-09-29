@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-class ScerpApi {
+class ScerpApi(private val store: LocalStore? = null) {
     companion object {
         const val BASE_URL = "https://scerp.cloud"
         init { CookieHandler.setDefault(CookieManager()) }
@@ -20,13 +20,24 @@ class ScerpApi {
         connection.connectTimeout = 15000
         connection.readTimeout = 30000
         connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/0.1.0")
+        connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/${BuildConfig.VERSION_NAME}")
+        store?.sessionCookie?.takeIf { it.isNotBlank() }?.let {
+            connection.setRequestProperty("Cookie", it)
+        }
         if (body != null) {
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
         }
         val code = connection.responseCode
+        val setCookies = connection.headerFields.entries
+            .firstOrNull { it.key?.equals("Set-Cookie", ignoreCase = true) == true }
+            ?.value
+            .orEmpty()
+            .mapNotNull { it.substringBefore(';').trim().takeIf(String::isNotBlank) }
+        if (setCookies.isNotEmpty()) {
+            store?.sessionCookie = setCookies.joinToString("; ")
+        }
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
         if (text.isBlank()) throw IllegalStateException("SCERP 응답이 비어 있습니다. HTTP $code")

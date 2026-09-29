@@ -15,6 +15,14 @@ class LocalStore(context: Context) {
         get() = prefs.getString("display_name", "") ?: ""
         set(value) = prefs.edit().putString("display_name", value).apply()
 
+    var sessionCookie: String
+        get() = prefs.getString("session_cookie", "") ?: ""
+        set(value) = prefs.edit().putString("session_cookie", value).apply()
+
+    fun clearSession() {
+        prefs.edit().remove("session_cookie").apply()
+    }
+
     var latestTimetableJson: String
         get() = prefs.getString("today_timetable", "[]") ?: "[]"
         set(value) = prefs.edit().putString("today_timetable", value).apply()

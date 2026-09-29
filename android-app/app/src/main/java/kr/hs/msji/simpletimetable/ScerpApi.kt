@@ -2,16 +2,19 @@ package kr.hs.msji.simpletimetable
 
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.CookieHandler
-import java.net.CookieManager
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+class ScerpApiException(
+    val status: Int,
+    val code: String,
+    message: String
+) : IllegalStateException(message)
+
 class ScerpApi(private val store: LocalStore? = null) {
     companion object {
         const val BASE_URL = "https://scerp.cloud"
-        init { CookieHandler.setDefault(CookieManager()) }
     }
 
     private fun request(path: String, method: String = "GET", body: JSONObject? = null): JSONObject {
@@ -41,13 +44,17 @@ class ScerpApi(private val store: LocalStore? = null) {
         }
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-        if (text.isBlank()) throw IllegalStateException("SCERP 응답이 비어 있습니다. HTTP $code")
+        if (text.isBlank()) {
+            throw ScerpApiException(code, "empty_response", "SCERP 응답이 비어 있습니다. HTTP $code")
+        }
         val json = JSONObject(text)
         if (!json.optBoolean("ok", code in 200..299)) {
-            val message = json.optJSONObject("error")?.optString("message")
+            val error = json.optJSONObject("error")
+            val errorCode = error?.optString("code").orEmpty().ifBlank { "request_failed" }
+            val message = error?.optString("message")
                 ?: json.optString("message")
                 ?: "SCERP 요청 실패"
-            throw IllegalStateException(message)
+            throw ScerpApiException(code, errorCode, message)
         }
         return json
     }

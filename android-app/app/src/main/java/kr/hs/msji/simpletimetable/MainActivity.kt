@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -629,6 +631,8 @@ private fun classSortKey(value: String): Triple<Int, Int, String> {
 @Composable
 private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedGrade by remember { mutableIntStateOf(3) }
+    var query by remember { mutableStateOf("") }
+
     val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
     val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
         compareBy<String>({ classSortKey(it).first }, { classSortKey(it).second }, { classSortKey(it).third })
@@ -636,7 +640,23 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedClass by remember(selectedGrade, classes) {
         mutableStateOf(classes.firstOrNull().orEmpty())
     }
-    val rows = gradeRows.filter { it.classCode == selectedClass }.sortedBy { it.period }
+
+    val classRows = gradeRows
+        .filter { it.classCode == selectedClass }
+        .sortedBy { it.period }
+
+    val searchResults = remember(state.allTimetable, query, selectedGrade) {
+        searchTimetableRows(state.allTimetable, query, selectedGrade)
+            .sortedWith(
+                compareBy<TimetableItem>(
+                    { classSortKey(it.classCode).first },
+                    { classSortKey(it.classCode).second },
+                    { classSortKey(it.classCode).third },
+                    { it.period }
+                )
+            )
+    }
+    val searching = query.isNotBlank()
 
     Column(
         Modifier
@@ -670,6 +690,27 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 
         Spacer(Modifier.height(8.dp))
 
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = { Text("과목·교사·학급·교실 검색") },
+            leadingIcon = {
+                Icon(Icons.Filled.Search, contentDescription = "검색")
+            },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
+                    }
+                }
+            },
+            shape = RoundedCornerShape(18.dp)
+        )
+
+        Spacer(Modifier.height(8.dp))
+
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -698,8 +739,11 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                     ) {
                         classes.forEach { classCode ->
                             FilterChip(
-                                selected = selectedClass == classCode,
-                                onClick = { selectedClass = classCode },
+                                selected = !searching && selectedClass == classCode,
+                                onClick = {
+                                    selectedClass = classCode
+                                    query = ""
+                                },
                                 label = { Text(classCode) }
                             )
                         }
@@ -708,7 +752,117 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
 
-        if (classes.isNotEmpty()) {
+        if (searching) {
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                "검색 결과 ${searchResults.size}건",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            if (searchResults.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)
+                ) {
+                    Column(
+                        Modifier.padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "검색 결과가 없습니다.",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "과목, 교사, 학급, 교실 또는 교시를 다시 입력해 보세요.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(
+                        searchResults,
+                        key = { "${it.grade}-${it.classCode}-${it.period}-${it.subject}" }
+                    ) { row ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
+                        ) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    modifier = Modifier.size(46.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            "${row.period}",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                Spacer(Modifier.width(12.dp))
+
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        row.subject.ifBlank { "과목 미지정" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    val detail = listOf(row.teacher, row.room)
+                                        .filter { it.isNotBlank() }
+                                        .joinToString(" · ")
+                                    if (detail.isNotBlank()) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            detail,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        row.classCode,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        "${row.period}교시",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (classes.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
 
             Surface(
@@ -725,7 +879,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        allTimetableClassSummary(selectedGrade, rows.size),
+                        allTimetableClassSummary(selectedGrade, classRows.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -738,7 +892,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(5.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {
-                items(rows, key = { "${it.classCode}-${it.period}-${it.subject}" }) { row ->
+                items(classRows, key = { "${it.classCode}-${it.period}-${it.subject}" }) { row ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),

@@ -2,6 +2,6 @@
   "versionCode": 16,
   "versionName": "0.3.10",
   "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.10/SCERP-Android-v0.3.10.apk",
-  "sha256": "bdb2f9153171f5b5e8c9c177fb78977b0b9d4b06e9d9364d2cf7aaaa264d715e",
-  "notes": "v0.3.10: 교사 시간표 매칭을 강화하고, 개인 시간표 조회 실패 시 전체 학급 시간표에서 교사명으로 다시 확인하도록 수정했습니다."
+  "sha256": "d050a954623e5d905bc6ca7cd3d990d5bfecb5524be28404bd7f4fd56e87216f",
+  "notes": "v0.3.10: 교사 시간표 매칭을 강화했고, 기존 v0.3.9와 동일한 앱 서명으로 다시 배포해 업데이트 설치 호환성을 복구했습니다."
 }

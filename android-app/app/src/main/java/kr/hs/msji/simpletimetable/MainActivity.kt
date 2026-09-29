@@ -275,11 +275,11 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
-@Composable
 private val SCHOOL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
 
 internal fun schoolToday(): LocalDate = LocalDate.now(SCHOOL_ZONE)
 
+@Composable
 private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
     val rows = remember(state.myTimetable) { state.myTimetable.sortedBy { it.period } }
     val selectedDate = remember(state.today) {

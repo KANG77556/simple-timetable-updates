@@ -8,7 +8,8 @@ class TimetableSearchTest {
         TimetableItem("2026-09-30", 3, "경영1", 1, "영문", "고창", "301"),
         TimetableItem("2026-09-30", 3, "경영2", 2, "진로", "김성", "302"),
         TimetableItem("2026-09-30", 3, "IT1", 4, "진로", "김성", "컴응1"),
-        TimetableItem("2026-09-30", 2, "경영1", 4, "진로", "김성", "201")
+        TimetableItem("2026-09-30", 2, "경영1", 4, "진로", "김성", "201"),
+        TimetableItem("2026-09-30", 3, "경영1", 7, "", "", "")
     )
 
     @Test
@@ -35,7 +36,12 @@ class TimetableSearchTest {
     }
 
     @Test
-    fun blankQuery_returnsAllRowsForSelectedGrade() {
+    fun blankQuery_returnsAllVisibleRowsForSelectedGrade() {
         assertEquals(3, searchTimetableRows(rows, "", 3).size)
+    }
+
+    @Test
+    fun emptyPeriodPlaceholder_isNotShownOrSearched() {
+        assertEquals(0, searchTimetableRows(rows, "7교시", 3).size)
     }
 }

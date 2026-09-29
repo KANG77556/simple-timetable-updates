@@ -1,7 +1,7 @@
 {
-  "versionCode": 20,
-  "versionName": "0.3.14",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.14/MilseongJeil-v0.3.14.apk",
-  "sha256": "82454a5d576c29363d3e071f20000a6357941eb82bb57c7f46bfba9e50edcd76",
-  "notes": "v0.3.14: 전체 시간표 화면의 상단·필터·학급 요약·교시 카드 간격을 정리하고 중복 학년 표시를 제거했습니다."
+  "versionCode": 21,
+  "versionName": "0.3.15",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.15/MilseongJeil-v0.3.15.apk",
+  "sha256": "39135ffb0f1f71bdddb226d19dacff87705137ce8f032cd28af4bc2335b3f02c",
+  "notes": "v0.3.15: 전체 시간표에서 과목·교사·학급·교실·교시를 검색할 수 있고 검색 결과 수와 초기화 기능을 제공합니다."
 }

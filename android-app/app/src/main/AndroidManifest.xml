@@ -6,7 +6,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="SimpleTimetable"
+        android:label="밀성제일고"
         android:theme="@style/Theme.SimpleTimetable">
         <activity
             android:name=".MainActivity"

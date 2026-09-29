@@ -71,7 +71,6 @@ object AppUpdateManager {
             connection.connectTimeout = 20000
             connection.readTimeout = 60000
             connection.setRequestProperty("User-Agent", "SCERP-Android/${BuildConfig.VERSION_NAME}")
-
             val code = connection.responseCode
             if (code !in 200..299) error("APK 다운로드 실패: HTTP $code")
 
@@ -94,18 +93,17 @@ object AppUpdateManager {
         }
     }
 
-    fun install(activity: Activity, apk: File) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            !activity.packageManager.canRequestPackageInstalls()
-        ) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${activity.packageName}")
-            )
-            activity.startActivity(intent)
-            return
-        }
+    fun canInstallPackages(activity: Activity): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            activity.packageManager.canRequestPackageInstalls()
 
+    fun createUnknownSourcesIntent(activity: Activity): Intent =
+        Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${activity.packageName}")
+        )
+
+    fun install(activity: Activity, apk: File) {
         val uri = FileProvider.getUriForFile(
             activity,
             "${activity.packageName}.fileprovider",
@@ -114,7 +112,6 @@ object AppUpdateManager {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         activity.startActivity(intent)
     }

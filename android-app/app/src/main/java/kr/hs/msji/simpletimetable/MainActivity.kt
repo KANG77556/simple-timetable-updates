@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -274,13 +275,17 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
+private val SCHOOL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+
+internal fun schoolToday(): LocalDate = LocalDate.now(SCHOOL_ZONE)
+
 @Composable
 private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
     val rows = remember(state.myTimetable) { state.myTimetable.sortedBy { it.period } }
     val selectedDate = remember(state.today) {
-        runCatching { LocalDate.parse(state.today) }.getOrDefault(LocalDate.now())
+        runCatching { LocalDate.parse(state.today) }.getOrDefault(schoolToday())
     }
-    val actualToday = LocalDate.now()
+    val actualToday = schoolToday()
     val isToday = selectedDate == actualToday
     val status = remember(state.myTimetable, state.today) {
         if (isToday) TimetableStatus.calculate(state.myTimetable) else ClassStatus()
@@ -649,7 +654,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     }
 
     val classRows = gradeRows
-        .filter { it.classCode == selectedClass }
+        .filter { it.classCode == selectedClass && it.hasVisibleLessonContent() }
         .sortedBy { it.period }
 
     val searchResults = remember(state.allTimetable, query, selectedGrade) {
@@ -668,7 +673,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 0.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -695,7 +700,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
 
         OutlinedTextField(
             value = query,
@@ -716,7 +721,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             shape = RoundedCornerShape(18.dp)
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -1002,7 +1007,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
     var text by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(LocalDate.now().toString()) }
+    var date by remember { mutableStateOf(schoolToday().toString()) }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("TODO", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         OutlinedTextField(text, { text = it }, label = { Text("할 일") }, modifier = Modifier.fillMaxWidth())
@@ -1025,7 +1030,7 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     var title by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(LocalDate.now().toString()) }
+    var date by remember { mutableStateOf(schoolToday().toString()) }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("캘린더", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         OutlinedTextField(title, { title = it }, label = { Text("일정") }, modifier = Modifier.fillMaxWidth())

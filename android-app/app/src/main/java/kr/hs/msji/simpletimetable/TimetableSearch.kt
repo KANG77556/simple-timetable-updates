@@ -1,11 +1,14 @@
 package kr.hs.msji.simpletimetable
 
+internal fun TimetableItem.hasVisibleLessonContent(): Boolean =
+    subject.isNotBlank() || teacher.isNotBlank() || room.isNotBlank()
+
 internal fun searchTimetableRows(
     rows: List<TimetableItem>,
     query: String,
     selectedGrade: Int
 ): List<TimetableItem> {
-    val gradeRows = rows.filter { it.grade == selectedGrade }
+    val gradeRows = rows.filter { it.grade == selectedGrade && it.hasVisibleLessonContent() }
     val needle = query.trim().lowercase()
     if (needle.isBlank()) return gradeRows
 

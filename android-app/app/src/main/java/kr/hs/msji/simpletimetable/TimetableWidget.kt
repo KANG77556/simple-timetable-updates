@@ -64,8 +64,10 @@ class TimetableWidget : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.timetable_widget)
 
             val status = when {
-                current != null -> "${current.period}교시 · ${current.subject}"
-                next != null -> "다음 ${next.period}교시 · ${next.subject}"
+                current != null -> listOf("${current.period}교시", current.subject, current.classCode)
+                    .filter { it.isNotBlank() }.joinToString(" · ")
+                next != null -> "다음 " + listOf("${next.period}교시", next.subject, next.classCode)
+                    .filter { it.isNotBlank() }.joinToString(" · ")
                 rows.isEmpty() -> "오늘 수업 없음"
                 else -> "오늘 수업 종료"
             }
@@ -95,7 +97,7 @@ class TimetableWidget : AppWidgetProvider() {
                 val marker = if (active) "▶ " else ""
                 val time = row.startTime.take(5)
                 val room = row.room.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
-                "$marker${row.period}교시  ${row.subject}${if (time.isNotBlank()) "  $time" else ""}$room"
+                "$marker${row.period}교시  ${row.subject}${row.classCode.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()}${if (time.isNotBlank()) "  $time" else ""}$room"
             }
 
             val pendingTodos = store.loadTodos().filter { !it.done }

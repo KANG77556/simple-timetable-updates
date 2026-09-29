@@ -34,12 +34,22 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon --max-workers=1 assembleDebug
 
+      - name: Build unsigned release APK
+        run: gradle --no-daemon --max-workers=1 assembleRelease
+
       - name: Verify APK metadata
         run: |
           cat app/build/outputs/apk/debug/output-metadata.json
+          cat app/build/outputs/apk/release/output-metadata.json
           sha256sum app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/release/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: SCERP-Android-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SCERP-Android-release-unsigned
+          path: android-app/app/build/outputs/apk/release/*.apk

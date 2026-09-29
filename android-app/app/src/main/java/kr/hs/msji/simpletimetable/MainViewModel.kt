@@ -104,10 +104,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshAll(date: String = _state.value.today) = viewModelScope.launch(Dispatchers.IO) {
-        runTask {
-            val rows = api.fetchPublicTimetable(date)
-            _state.value = _state.value.copy(allTimetable = rows, today = date)
-        }
+        runTask { refreshAllWeekDirect(date) }
+    }
+
+    fun moveAllWeek(weeks: Long) = viewModelScope.launch(Dispatchers.IO) {
+        val base = runCatching { LocalDate.parse(_state.value.today) }.getOrDefault(LocalDate.now())
+        runTask { refreshAllWeekDirect(base.plusWeeks(weeks).toString()) }
+    }
+
+    private fun refreshAllWeekDirect(anchorDate: String) {
+        val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrDefault(LocalDate.now())
+        val monday = anchor.minusDays((anchor.dayOfWeek.value - 1).toLong())
+        val dates = (0L..4L).map { monday.plusDays(it) }
+        val rows = dates.flatMap { api.fetchPublicTimetable(it.toString()) }
+        _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
     fun addMemo(text: String) {

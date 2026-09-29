@@ -31,6 +31,9 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
+      - name: Run unit tests
+        run: gradle --no-daemon --max-workers=1 testDebugUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon --max-workers=1 assembleDebug
 

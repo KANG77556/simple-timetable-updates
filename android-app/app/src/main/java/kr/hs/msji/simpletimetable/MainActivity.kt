@@ -607,6 +607,12 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
+internal fun allTimetableGradeSummary(grade: Int, classCount: Int): String =
+    "${grade}학년 · ${classCount}개 학급"
+
+internal fun allTimetableClassSummary(grade: Int, periodCount: Int): String =
+    "${grade}학년 · ${periodCount}교시"
+
 private fun classSortKey(value: String): Triple<Int, Int, String> {
     val text = value.trim()
     val group = when {
@@ -635,143 +641,155 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "전체 시간표",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    if (classes.isEmpty()) "${selectedGrade}학년 시간표 없음"
-                    else "${selectedGrade}학년 · ${classes.size}개 학급",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            FilledTonalButton(onClick = vm::refreshAll) {
-                Text("새로고침")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "전체 시간표",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                if (classes.isEmpty()) "${selectedGrade}학년 시간표 없음"
+                else allTimetableGradeSummary(selectedGrade, classes.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(4.dp))
+            TextButton(
+                onClick = vm::refreshAll,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text("↻", style = MaterialTheme.typography.titleLarge)
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
-            Row(
-                Modifier.padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                (1..3).forEach { grade ->
-                    FilterChip(
-                        selected = selectedGrade == grade,
-                        onClick = { selectedGrade = grade },
-                        label = { Text("${grade}학년") },
-                        modifier = Modifier.weight(1f)
-                    )
+            Column(Modifier.padding(6.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    (1..3).forEach { grade ->
+                        FilterChip(
+                            selected = selectedGrade == grade,
+                            onClick = { selectedGrade = grade },
+                            label = { Text("${grade}학년") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                if (classes.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        classes.forEach { classCode ->
+                            FilterChip(
+                                selected = selectedClass == classCode,
+                                onClick = { selectedClass = classCode },
+                                label = { Text(classCode) }
+                            )
+                        }
+                    }
                 }
             }
         }
 
         if (classes.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                classes.forEach { classCode ->
-                    FilterChip(
-                        selected = selectedClass == classCode,
-                        onClick = { selectedClass = classCode },
-                        label = { Text(classCode) }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                )
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            selectedClass,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "${selectedGrade}학년 · ${rows.size}교시",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("${selectedGrade}학년") }
-                    )
-                }
-            }
-
             Spacer(Modifier.height(8.dp))
 
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)
+            ) {
+                Column(
+                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        selectedClass,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        allTimetableClassSummary(selectedGrade, rows.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(bottom = 12.dp)
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
             ) {
                 items(rows, key = { "${it.classCode}-${it.period}-${it.subject}" }) { row ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large,
-                        tonalElevation = 1.dp,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        shape = RoundedCornerShape(16.dp),
+                        tonalElevation = 0.dp,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
                     ) {
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.size(46.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
-                                Text(
-                                    "${row.period}",
-                                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "${row.period}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
+
                             Spacer(Modifier.width(12.dp))
+
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     row.subject.ifBlank { "과목 미지정" },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 val detail = listOf(row.teacher, row.room)
                                     .filter { it.isNotBlank() }
                                     .joinToString(" · ")
                                 if (detail.isNotBlank()) {
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         detail,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
+
                             Text(
                                 "${row.period}교시",
                                 style = MaterialTheme.typography.labelMedium,
@@ -782,12 +800,17 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
         } else {
-            Spacer(Modifier.height(20.dp))
-            Card(Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)
+            ) {
                 Text(
                     "${selectedGrade}학년 시간표 데이터가 없습니다.",
-                    modifier = Modifier.padding(20.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.padding(18.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

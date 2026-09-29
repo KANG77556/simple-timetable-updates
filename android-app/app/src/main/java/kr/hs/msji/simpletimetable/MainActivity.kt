@@ -280,50 +280,172 @@ private fun classSortKey(value: String): Triple<Int, Int, String> {
 @Composable
 private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedGrade by remember { mutableIntStateOf(3) }
+    val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
+    val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
+        compareBy<String>({ classSortKey(it).first }, { classSortKey(it).second }, { classSortKey(it).third })
+    )
+    var selectedClass by remember(selectedGrade, classes) {
+        mutableStateOf(classes.firstOrNull().orEmpty())
+    }
+    val rows = gradeRows.filter { it.classCode == selectedClass }.sortedBy { it.period }
 
-    Column(Modifier.fillMaxSize().padding(12.dp)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("전체 학년·반 시간표", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Button(onClick = { vm.refreshAll() }) { Text("새로고침") }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            (1..3).forEach { grade ->
-                FilterChip(
-                    selected = selectedGrade == grade,
-                    onClick = { selectedGrade = grade },
-                    label = { Text("${grade}학년") }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "전체 시간표",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (classes.isEmpty()) "${selectedGrade}학년 시간표 없음"
+                    else "${selectedGrade}학년 · ${classes.size}개 학급",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            FilledTonalButton(onClick = vm::refreshAll) {
+                Text("새로고침")
+            }
         }
-        Spacer(Modifier.height(8.dp))
 
-        val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
-        val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
-            compareBy<String>({ classSortKey(it).first }, { classSortKey(it).second }, { classSortKey(it).third })
-        )
+        Spacer(Modifier.height(12.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(classes) { classCode ->
-                val rows = gradeRows.filter { it.classCode == classCode }.sortedBy { it.period }
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text(classCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(6.dp))
-                        (1..7).forEach { period ->
-                            val row = rows.firstOrNull { it.period == period }
-                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                Text("${period}교시", modifier = Modifier.width(56.dp), fontWeight = FontWeight.SemiBold)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        ) {
+            Row(
+                Modifier.padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                (1..3).forEach { grade ->
+                    FilterChip(
+                        selected = selectedGrade == grade,
+                        onClick = { selectedGrade = grade },
+                        label = { Text("${grade}학년") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        if (classes.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                classes.forEach { classCode ->
+                    FilterChip(
+                        selected = selectedClass == classCode,
+                        onClick = { selectedClass = classCode },
+                        label = { Text(classCode) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                )
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            selectedClass,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "${selectedGrade}학년 · ${rows.size}교시",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text("${selectedGrade}학년") }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(bottom = 12.dp)
+            ) {
+                items(rows, key = { "${it.classCode}-${it.period}-${it.subject}" }) { row ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        tonalElevation = 1.dp,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
                                 Text(
-                                    row?.let {
-                                        listOf(it.subject, it.teacher, it.room).filter { s -> s.isNotBlank() }.joinToString(" · ")
-                                    } ?: "",
-                                    modifier = Modifier.weight(1f)
+                                    "${row.period}",
+                                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    row.subject.ifBlank { "과목 미지정" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                                val detail = listOf(row.teacher, row.room)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" · ")
+                                if (detail.isNotBlank()) {
+                                    Text(
+                                        detail,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Text(
+                                "${row.period}교시",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
+            }
+        } else {
+            Spacer(Modifier.height(20.dp))
+            Card(Modifier.fillMaxWidth()) {
+                Text(
+                    "${selectedGrade}학년 시간표 데이터가 없습니다.",
+                    modifier = Modifier.padding(20.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

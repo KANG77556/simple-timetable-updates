@@ -59,20 +59,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshToday() = viewModelScope.launch(Dispatchers.IO) {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
         if (userId.isBlank()) return@launch
-        runTask { refreshTodayDirect(userId) }
+        runTask { refreshDateDirect(_state.value.today, userId) }
+    }
+
+    fun moveDate(days: Long) {
+        val base = runCatching { LocalDate.parse(_state.value.today) }.getOrDefault(LocalDate.now())
+        loadDate(base.plusDays(days))
+    }
+
+    fun goToToday() {
+        loadDate(LocalDate.now())
+    }
+
+    fun selectDate(date: LocalDate) {
+        loadDate(date)
+    }
+
+    private fun loadDate(date: LocalDate) = viewModelScope.launch(Dispatchers.IO) {
+        val userId = _state.value.profile.userId.ifBlank { store.userId }
+        if (userId.isBlank()) return@launch
+        runTask { refreshDateDirect(date.toString(), userId) }
     }
 
     private fun refreshTodayDirect(userId: String) {
+        refreshDateDirect(LocalDate.now().toString(), userId)
+    }
+
+    private fun refreshDateDirect(date: String, userId: String) {
         val before = _state.value.myTimetable
         val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
-        val rows = api.fetchMyTimetable(_state.value.today, userId, displayName)
-        val changed = before.isNotEmpty() && before != rows
-        store.latestTimetableJson = encodeTimetable(rows)
-        TimetableWidget.updateAll(getApplication())
-        if (changed) {
-            NotificationHelper.showTimetableChanged(getApplication())
+        val rows = api.fetchMyTimetable(date, userId, displayName)
+        val isActualToday = date == LocalDate.now().toString()
+
+        if (isActualToday) {
+            val changed = before.isNotEmpty() && before != rows
+            store.latestTimetableJson = encodeTimetable(rows)
+            TimetableWidget.updateAll(getApplication())
+            if (changed) {
+                NotificationHelper.showTimetableChanged(getApplication())
+            }
         }
-        _state.value = _state.value.copy(myTimetable = rows)
+
+        _state.value = _state.value.copy(today = date, myTimetable = rows)
     }
 
     fun refreshAll(date: String = _state.value.today) = viewModelScope.launch(Dispatchers.IO) {

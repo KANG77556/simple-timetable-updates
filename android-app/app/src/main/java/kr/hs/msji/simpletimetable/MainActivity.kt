@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +36,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -270,8 +274,18 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
 
 @Composable
 private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
-    val status = remember(state.myTimetable) { TimetableStatus.calculate(state.myTimetable) }
     val rows = remember(state.myTimetable) { state.myTimetable.sortedBy { it.period } }
+    val selectedDate = remember(state.today) {
+        runCatching { LocalDate.parse(state.today) }.getOrDefault(LocalDate.now())
+    }
+    val actualToday = LocalDate.now()
+    val isToday = selectedDate == actualToday
+    val status = remember(state.myTimetable, state.today) {
+        if (isToday) TimetableStatus.calculate(state.myTimetable) else ClassStatus()
+    }
+    val dateLabel = remember(selectedDate) {
+        selectedDate.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN))
+    }
 
     Column(
         Modifier
@@ -282,34 +296,83 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "오늘의 시간표",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    state.today,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                if (isToday) "오늘의 시간표" else "시간표",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
             FilledTonalButton(
-                onClick = vm::refreshToday,
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
+                onClick = vm::goToToday,
+                enabled = !isToday,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("새로고침")
+                Icon(Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("오늘")
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                IconButton(onClick = { vm.moveDate(-1) }) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowLeft,
+                        contentDescription = "이전 날짜",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline
+                )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        dateLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                IconButton(onClick = { vm.moveDate(1) }) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowRight,
+                        contentDescription = "다음 날짜",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
 
         val focus = status.current ?: status.next
-        if (focus != null) {
+        if (isToday && focus != null) {
             val current = status.current != null
             val label = if (current) "현재 교시" else "다음 수업"
             val minutes = if (current) status.minutesRemaining else status.minutesUntilNext
@@ -326,46 +389,41 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline,
-                        RoundedCornerShape(22.dp)
-                    ),
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(22.dp)),
                 shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
             ) {
                 Row(
-                    Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+                    Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "${focus.period}",
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "${focus.period}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
-                    Spacer(Modifier.width(18.dp))
-
-                    Box(
-                        Modifier
-                            .width(1.dp)
-                            .height(72.dp)
-                            .border(0.5.dp, MaterialTheme.colorScheme.outline)
-                    )
-
-                    Spacer(Modifier.width(18.dp))
+                    Spacer(Modifier.width(16.dp))
 
                     Column(Modifier.weight(1f)) {
                         Text(
                             focus.subject.ifBlank { "과목 미지정" },
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -374,7 +432,7 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 detail,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -391,7 +449,7 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             )
                             Text(
                                 "${minutes}분",
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -405,30 +463,60 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                     .fillMaxWidth()
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(22.dp)),
                 shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surface
+                color = if (isToday) {
+                    MaterialTheme.colorScheme.surface
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                }
             ) {
-                Column(Modifier.padding(20.dp)) {
-                    Text(
-                        if (rows.isEmpty()) "오늘 수업 없음" else "오늘 수업 종료",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        if (rows.isEmpty()) "오늘 등록된 수업이 없습니다." else "오늘 일정이 모두 끝났습니다.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(15.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.padding(13.dp).size(26.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            when {
+                                !isToday -> "선택 날짜 시간표"
+                                rows.isEmpty() -> "오늘 수업 없음"
+                                else -> "오늘 수업 종료"
+                            },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            when {
+                                !isToday && rows.isEmpty() -> "등록된 수업이 없습니다."
+                                !isToday -> "총 ${rows.size}개 수업이 있습니다."
+                                rows.isEmpty() -> "오늘 등록된 수업이 없습니다."
+                                else -> "오늘 일정이 모두 끝났습니다."
+                            },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 14.dp)
         ) {
-            items(rows, key = { it.period }) { row ->
-                val active = status.current?.period == row.period
+            items(rows, key = { "${it.date}-${it.period}-${it.classCode}" }) { row ->
+                val active = isToday && status.current?.period == row.period
                 val borderColor = if (active) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.outline
                 val containerColor = if (active) MaterialTheme.colorScheme.primaryContainer
@@ -442,7 +530,7 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                     color = containerColor
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -451,12 +539,12 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             else MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Box(
-                                modifier = Modifier.size(54.dp),
+                                modifier = Modifier.size(56.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     "${row.period}",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = if (active) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurface
@@ -470,7 +558,7 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                             Text(
                                 row.subject.ifBlank { "과목 미지정" },
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -485,14 +573,12 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                                 row.classCode.takeIf { it.isNotBlank() }
                             ).filterNotNull().joinToString(" ")
 
-                            val detail = listOf(
-                                time,
-                                gradeClass,
-                                row.room
-                            ).filter { it.isNotBlank() }.joinToString(" · ")
+                            val detail = listOf(time, gradeClass, row.room)
+                                .filter { it.isNotBlank() }
+                                .joinToString(" · ")
 
                             if (detail.isNotBlank()) {
-                                Spacer(Modifier.height(3.dp))
+                                Spacer(Modifier.height(4.dp))
                                 Text(
                                     detail,
                                     style = MaterialTheme.typography.bodyMedium,

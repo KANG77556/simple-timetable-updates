@@ -898,7 +898,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                     Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "이전 주")
                 }
                 Text(
-                    "\${weekStart.format(rangeFormatter)} - \${weekStart.plusDays(4).format(rangeFormatter)}",
+                    "${weekStart.format(rangeFormatter)} - ${weekStart.plusDays(4).format(rangeFormatter)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )

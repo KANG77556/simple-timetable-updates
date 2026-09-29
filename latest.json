@@ -1,8 +1,8 @@
-﻿{
-    "version":  "2.1.2",
-    "file":  "SimpleTimetable-v2.1.2.exe",
-    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.1.2/SimpleTimetable-v2.1.2.exe",
-    "sha256":  "ea86a70437d209e370635bac082b50cf10f1e5113f8d61e3b6f97d39ded47494",
-    "size":  21608292,
-    "notes":  "v2.1.2: 업데이트 안정성 수정. PyInstaller 부모/자식 프로세스 완전 종료 및 파일 잠금 해제 후 교체, 백업/무결성/재실행 검증 강화."
+{
+  "version": "2.9.5",
+  "file": "SimpleTimetable-v2.9.5.exe",
+  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.9.5/SimpleTimetable-v2.9.5.exe",
+  "sha256": "390226b87a70f244324eadbf21b7719c9835a75cee697f491a8b6e182ccf2560",
+  "size": 21665041,
+  "notes": "Windows SimpleTimetable update metadata. Android releases are tracked separately in android-latest.json."
 }

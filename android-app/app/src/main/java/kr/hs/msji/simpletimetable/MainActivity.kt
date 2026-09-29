@@ -64,7 +64,7 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                     Column {
                         Text("SimpleTimetable", fontWeight = FontWeight.Bold)
                         Text(
-                            state.profile.displayName.ifBlank { "밀성제일고등학교" },
+                            state.profile.displayName.ifBlank { "밀성제일고등학교" } + " · v" + BuildConfig.VERSION_NAME,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }

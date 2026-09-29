@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,9 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -42,7 +46,22 @@ class MainActivity : ComponentActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
         }
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFF8FC7FF),
+                    onPrimary = Color(0xFF07111D),
+                    primaryContainer = Color(0xFF16283A),
+                    onPrimaryContainer = Color(0xFFD7EAFF),
+                    secondary = Color(0xFFA9C7E8),
+                    secondaryContainer = Color(0xFF203040),
+                    background = Color(0xFF0B0D10),
+                    surface = Color(0xFF111419),
+                    surfaceVariant = Color(0xFF181C22),
+                    onSurface = Color(0xFFF4F6F8),
+                    onSurfaceVariant = Color(0xFFB4BBC5),
+                    outline = Color(0xFF2A313A)
+                )
+            ) {
                 val vm: MainViewModel = viewModel()
                 SimpleTimetableApp(vm)
             }
@@ -79,14 +98,23 @@ fun SimpleTimetableApp(vm: MainViewModel) {
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 title = {
                     Column {
-                        Text("SimpleTimetable", fontWeight = FontWeight.Bold)
                         Text(
-                            state.profile.displayName.ifBlank { "밀성제일고등학교" } + " · v" + BuildConfig.VERSION_NAME,
-                            style = MaterialTheme.typography.labelSmall
+                            "밀성제일고",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            state.profile.displayName.ifBlank { "선생님" } + " · v" + BuildConfig.VERSION_NAME,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -243,95 +271,243 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
     val status = remember(state.myTimetable) { TimetableStatus.calculate(state.myTimetable) }
+    val rows = remember(state.myTimetable) { state.myTimetable.sortedBy { it.period } }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("오늘의 시간표", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(state.today)
-            }
-            Button(onClick = vm::refreshToday) { Text("새로고침") }
-        }
-
-        Spacer(Modifier.height(14.dp))
-
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.padding(18.dp)) {
-                val headline = when {
-                    status.current != null -> listOf(
-                        "${status.current.period}교시",
-                        status.current.subject,
-                        listOf(status.current.grade.takeIf { it > 0 }?.let { "${it}학년" }, status.current.classCode).filterNotNull().filter { it.isNotBlank() }.joinToString(" ")
-                    ).filter { it.isNotBlank() }.joinToString(" · ")
-                    status.next != null -> "다음 " + listOf(
-                        "${status.next.period}교시",
-                        status.next.subject,
-                        listOf(status.next.grade.takeIf { it > 0 }?.let { "${it}학년" }, status.next.classCode).filterNotNull().filter { it.isNotBlank() }.joinToString(" ")
-                    ).filter { it.isNotBlank() }.joinToString(" · ")
-                    state.myTimetable.isEmpty() -> "오늘 수업 없음"
-                    else -> "오늘 수업 종료"
-                }
-                val detail = when {
-                    status.current != null -> {
-                        val room = status.current.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
-                        "현재 수업 · ${status.minutesRemaining ?: 0}분 남음 · $room"
-                    }
-                    status.next != null -> {
-                        val room = status.next.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
-                        "수업 시작까지 ${status.minutesUntilNext ?: 0}분 · $room"
-                    }
-                    else -> "오늘 일정이 모두 끝났습니다."
-                }
-                Text(headline, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text(detail)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "오늘의 시간표",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    state.today,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            FilledTonalButton(
+                onClick = vm::refreshToday,
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("새로고침")
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
 
-        if (state.myTimetable.isEmpty()) {
-            Card(Modifier.fillMaxWidth()) {
-                Text("오늘 등록된 수업이 없습니다.", Modifier.padding(18.dp))
+        val focus = status.current ?: status.next
+        if (focus != null) {
+            val current = status.current != null
+            val label = if (current) "현재 교시" else "다음 수업"
+            val minutes = if (current) status.minutesRemaining else status.minutesUntilNext
+            val timeLabel = if (current) "수업 종료까지" else "수업 시작까지"
+            val gradeClass = listOf(
+                focus.grade.takeIf { it > 0 }?.let { "${it}학년" },
+                focus.classCode.takeIf { it.isNotBlank() }
+            ).filterNotNull().joinToString(" ")
+            val detail = listOf(
+                gradeClass,
+                focus.room.takeIf { it.isNotBlank() }
+            ).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(22.dp)
+                    ),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "${focus.period}",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(Modifier.width(18.dp))
+
+                    Box(
+                        Modifier
+                            .width(1.dp)
+                            .height(72.dp)
+                            .border(0.5.dp, MaterialTheme.colorScheme.outline)
+                    )
+
+                    Spacer(Modifier.width(18.dp))
+
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            focus.subject.ifBlank { "과목 미지정" },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (detail.isNotBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                detail,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    if (minutes != null) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                timeLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "${minutes}분",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.myTimetable, key = { it.period }) { row ->
-                    val active = status.current?.period == row.period
-                    Card(
-                        Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (active) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Text(
+                        if (rows.isEmpty()) "오늘 수업 없음" else "오늘 수업 종료",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (rows.isEmpty()) "오늘 등록된 수업이 없습니다." else "오늘 일정이 모두 끝났습니다.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 14.dp)
+        ) {
+            items(rows, key = { it.period }) { row ->
+                val active = status.current?.period == row.period
+                val borderColor = if (active) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outline
+                val containerColor = if (active) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surface
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, borderColor, RoundedCornerShape(18.dp)),
+                    shape = RoundedCornerShape(18.dp),
+                    color = containerColor
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = MaterialTheme.shapes.medium,
-                                tonalElevation = if (active) 6.dp else 3.dp
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Box(
+                                modifier = Modifier.size(54.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     "${row.period}",
-                                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(row.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                val time = listOf(row.startTime.take(5), row.endTime.take(5)).filter { it.isNotBlank() }.joinToString(" ~ ")
-                                val gradeClass = listOf(
-                                    row.grade.takeIf { it > 0 }?.let { "${it}학년" },
-                                    row.classCode.takeIf { it.isNotBlank() }
-                                ).filterNotNull().joinToString(" ")
-                                Text(listOf(gradeClass, time, row.room).filter { it.isNotBlank() }.joinToString(" · "))
+                        }
+
+                        Spacer(Modifier.width(14.dp))
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                row.subject.ifBlank { "과목 미지정" },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            val time = listOf(
+                                row.startTime.take(5),
+                                row.endTime.take(5)
+                            ).filter { it.isNotBlank() }.joinToString(" ~ ")
+
+                            val gradeClass = listOf(
+                                row.grade.takeIf { it > 0 }?.let { "${it}학년" },
+                                row.classCode.takeIf { it.isNotBlank() }
+                            ).filterNotNull().joinToString(" ")
+
+                            val detail = listOf(
+                                time,
+                                gradeClass,
+                                row.room
+                            ).filter { it.isNotBlank() }.joinToString(" · ")
+
+                            if (detail.isNotBlank()) {
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    detail,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                            if (active) {
-                                AssistChip(onClick = {}, label = { Text("현재") })
-                            }
+                        }
+
+                        if (active) {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text("현재") }
+                            )
                         }
                     }
                 }

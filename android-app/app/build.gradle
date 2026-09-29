@@ -14,11 +14,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId "kr.hs.msji.milseongjeil"
+        applicationId "kr.hs.msji.milseongjeil.stable"
         minSdk 26
         targetSdk 35
-        versionCode 18
-        versionName "0.3.12"
+        versionCode 19
+        versionName "0.3.13"
     }
 
     signingConfigs {

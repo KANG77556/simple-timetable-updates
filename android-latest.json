@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "0.3.8",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.8/SCERP-Android-v0.3.8.apk",
-  "sha256": "72444d1d63fa1720643844dc3e082841dbcdaaa3a6a188c7bd170c43678ae3c3",
-  "notes": "v0.3.8: 업데이트 직후 기존 인증 쿠키가 없는 사용자는 한 번만 다시 로그인하도록 안내하고, 이후에는 로그인 ID를 기억해 재입력을 줄이도록 로그인 화면을 개선했습니다."
+  "versionCode": 15,
+  "versionName": "0.3.9",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.9/SCERP-Android-v0.3.9.apk",
+  "sha256": "024a5773b8a1887d83541c2c12cd10ee6edfee2d457c755b47b9333bc0477f4f",
+  "notes": "v0.3.9: Android 앱의 로그인 요청에 SCERP.cloud Origin 헤더를 포함하도록 수정해 '요청 출처를 확인할 수 없습니다' 오류를 해결했습니다."
 }

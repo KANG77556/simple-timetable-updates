@@ -20,6 +20,7 @@ class ScerpApi(private val store: LocalStore? = null) {
         connection.connectTimeout = 15000
         connection.readTimeout = 30000
         connection.setRequestProperty("Accept", "application/json")
+        connection.setRequestProperty("Origin", BASE_URL)
         connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/${BuildConfig.VERSION_NAME}")
         store?.sessionCookie?.takeIf { it.isNotBlank() }?.let {
             connection.setRequestProperty("Cookie", it)

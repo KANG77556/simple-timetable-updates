@@ -176,7 +176,7 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "SimpleTimetable",
+                    "밀성제일고",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)

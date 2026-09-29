@@ -449,8 +449,15 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            val displayTime = if (minutes > 60) {
+                                val hours = minutes / 60
+                                val remainingMinutes = minutes % 60
+                                if (remainingMinutes == 0L) "${hours}시간" else "${hours}시간 ${remainingMinutes}분"
+                            } else {
+                                "${minutes}분"
+                            }
                             Text(
-                                "${minutes}분",
+                                displayTime,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary

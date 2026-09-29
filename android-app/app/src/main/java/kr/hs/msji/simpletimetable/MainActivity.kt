@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -653,10 +654,6 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
         mutableStateOf(classes.firstOrNull().orEmpty())
     }
 
-    val classRows = gradeRows
-        .filter { it.classCode == selectedClass && it.hasVisibleLessonContent() }
-        .sortedBy { it.period }
-
     val searchResults = remember(state.allTimetable, query, selectedGrade) {
         searchTimetableRows(state.allTimetable, query, selectedGrade)
             .sortedWith(
@@ -875,95 +872,201 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
         } else if (classes.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
-            Surface(
+            val anchorDate = remember(state.today) {
+                runCatching { LocalDate.parse(state.today) }.getOrDefault(schoolToday())
+            }
+            val weekStart = remember(anchorDate) {
+                anchorDate.minusDays((anchorDate.dayOfWeek.value - 1).toLong())
+            }
+            val weekDates = remember(weekStart) { (0L..4L).map { weekStart.plusDays(it) } }
+            val selectedRows = gradeRows.filter {
+                it.classCode == selectedClass && it.hasVisibleLessonContent()
+            }
+            val visiblePeriods = selectedRows.map { it.period }.distinct().sorted()
+            val formatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.KOREA) }
+            val rangeFormatter = remember { DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREA) }
+            val weekdayLabels = listOf("월", "화", "수", "목", "금")
+
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        selectedClass,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        allTimetableClassSummary(selectedGrade, classRows.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                FilledTonalIconButton(onClick = { vm.moveAllWeek(-1) }) {
+                    Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "이전 주")
+                }
+                Text(
+                    "${weekStart.format(rangeFormatter)} - ${weekStart.plusDays(4).format(rangeFormatter)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                FilledTonalIconButton(onClick = { vm.moveAllWeek(1) }) {
+                    Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 주")
                 }
             }
 
             Spacer(Modifier.height(6.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-                contentPadding = PaddingValues(bottom = 8.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                items(classRows, key = { "${it.classCode}-${it.period}-${it.subject}" }) { row ->
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 0.dp,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
-                    ) {
-                        Row(
+                Column(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Box(
                             Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .width(54.dp)
+                                .height(62.dp),
+                            contentAlignment = Alignment.Center
                         ) {
+                            Text("교시", fontWeight = FontWeight.Bold)
+                        }
+
+                        weekDates.forEachIndexed { index, date ->
+                            val isToday = date == schoolToday()
                             Surface(
-                                modifier = Modifier.size(46.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(62.dp)
+                                    .padding(1.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isToday) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    Color.Transparent
+                                }
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    if (isToday) {
+                                        Text(
+                                            "오늘",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                     Text(
-                                        "${row.period}",
-                                        style = MaterialTheme.typography.titleLarge,
+                                        weekdayLabels[index],
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold
                                     )
+                                    Text(
+                                        date.format(formatter),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
+                        }
+                    }
 
-                            Spacer(Modifier.width(12.dp))
-
-                            Column(Modifier.weight(1f)) {
+                    visiblePeriods.forEach { period ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(76.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .width(54.dp)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Text(
-                                    row.subject.ifBlank { "과목 미지정" },
+                                    "$period",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    fontWeight = FontWeight.Bold
                                 )
-                                val detail = listOf(row.teacher, row.room)
-                                    .filter { it.isNotBlank() }
-                                    .joinToString(" · ")
-                                if (detail.isNotBlank()) {
-                                    Spacer(Modifier.height(2.dp))
+                                val representative = selectedRows.firstOrNull { it.period == period }
+                                if (!representative?.startTime.isNullOrBlank()) {
                                     Text(
-                                        detail,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        representative?.startTime.orEmpty(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
 
-                            Text(
-                                "${row.period}교시",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            weekDates.forEach { date ->
+                                val row = selectedRows.firstOrNull {
+                                    it.date == date.toString() && it.period == period
+                                }
+                                if (row == null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .padding(2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "—",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                } else {
+                                    val cellColor = remember(row.subject) { timetableSubjectColor(row.subject) }
+                                    Surface(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .padding(2.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = cellColor
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 7.dp, vertical = 6.dp),
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                row.subject,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            val detail = listOf(row.teacher, row.room)
+                                                .filter { it.isNotBlank() }
+                                                .joinToString(" · ")
+                                            if (detail.isNotBlank()) {
+                                                Spacer(Modifier.height(2.dp))
+                                                Text(
+                                                    detail,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+            }
+
+            if (visiblePeriods.isEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "선택한 주에 등록된 수업이 없습니다.",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else {
             Spacer(Modifier.height(16.dp))
@@ -1085,4 +1188,19 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
         ) { Text("방송 보내기") }
         if (state.message.isNotBlank()) Text(state.message)
     }
+}
+
+
+private fun timetableSubjectColor(subject: String): Color {
+    val palette = listOf(
+        Color(0xFF3A275F),
+        Color(0xFF244D73),
+        Color(0xFF6C3D20),
+        Color(0xFF14613F),
+        Color(0xFF8A2432),
+        Color(0xFF1B6B73),
+        Color(0xFF4F6B27)
+    )
+    val index = (subject.hashCode() and Int.MAX_VALUE) % palette.size
+    return palette[index]
 }

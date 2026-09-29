@@ -2,6 +2,12 @@ name: Build Signed Android Release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "android-app/**"
+      - ".github/workflows/android-release.yml"
 
 jobs:
   release:
@@ -46,6 +52,9 @@ jobs:
         run: |
           printf '%s' "$KEYSTORE_B64" | base64 --decode > release.keystore
           chmod 600 release.keystore
+
+      - name: Run unit tests
+        run: gradle --no-daemon --max-workers=1 testDebugUnitTest
 
       - name: Build signed release APK
         env:

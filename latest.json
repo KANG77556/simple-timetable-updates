@@ -1,8 +1,8 @@
 {
-  "version": "2.9.6",
-  "file": "SimpleTimetable-v2.9.6.exe",
-  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.9.6/SimpleTimetable-v2.9.6.exe",
-  "sha256": "34f837f6a8d4c3c5ebc520421e55c28d23397193123f7ec6053604e87d2e96c1",
-  "size": 38701861,
-  "notes": "Windows SimpleTimetable v2.9.6. Verified SCERP timetable rendering and separated Windows update metadata from Android releases."
+    "size":  38704426,
+    "version":  "2.9.7",
+    "sha256":  "eb8b1b49f21ceb884e87e6bd8f4d6b56dfabd0f9a980579e585e162c5bf82ba0",
+    "notes":  "UI 간결화 및 업데이트 채널 안정화. 내부 Google Drive 경로를 사용자에게 노출하지 않고 공식 업데이트 서버를 우선 사용합니다.",
+    "url":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.9.7/SimpleTimetable-v2.9.7.exe",
+    "file":  "SimpleTimetable-v2.9.7.exe"
 }

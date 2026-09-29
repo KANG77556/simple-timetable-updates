@@ -143,11 +143,18 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
                 .padding(horizontal = 28.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                "SimpleTimetable",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "SimpleTimetable",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                UpdateAction()
+            }
             Text(
                 "밀성제일고등학교 · SCERP.cloud",
                 style = MaterialTheme.typography.bodyLarge,

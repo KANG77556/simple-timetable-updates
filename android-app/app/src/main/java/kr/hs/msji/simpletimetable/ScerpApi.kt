@@ -63,9 +63,9 @@ class ScerpApi(private val store: LocalStore? = null) {
         request("/api/auth/login", "POST", JSONObject().put("loginId", loginId).put("password", password))
         val me = request("/api/me").optJSONObject("data") ?: JSONObject()
         return UserProfile(
-            userId = me.optString("userId"),
-            displayName = me.optString("displayName", me.optString("loginId")),
-            schoolName = me.optString("schoolName", "밀성제일고등학교")
+            userId = firstNonBlank(me, "userId", "user_id", "id"),
+            displayName = firstNonBlank(me, "displayName", "display_name", "name", "loginId", "login_id"),
+            schoolName = firstNonBlank(me, "schoolName", "school_name").ifBlank { "밀성제일고등학교" }
         )
     }
 
@@ -74,7 +74,8 @@ class ScerpApi(private val store: LocalStore? = null) {
             .trim()
             .replace("선생님", "")
             .replace("교사", "")
-            .replace(Regex("\\s+"), "")
+            .replace("담당", "")
+            .replace(Regex("[\\s·._-]+"), "")
             .lowercase()
 
     private fun teacherMatches(displayName: String, teacherAlias: String): Boolean {
@@ -86,35 +87,92 @@ class ScerpApi(private val store: LocalStore? = null) {
         return shorter >= 2 && (profile.startsWith(alias) || alias.startsWith(profile))
     }
 
+    private fun firstNonBlank(row: JSONObject, vararg keys: String): String {
+        for (key in keys) {
+            val value = row.optString(key).trim()
+            if (value.isNotBlank() && value != "null") return value
+        }
+        return ""
+    }
+
+    private fun teacherUserId(row: JSONObject): String =
+        firstNonBlank(
+            row,
+            "teacher_user_id",
+            "teacherUserId",
+            "user_id",
+            "userId",
+            "teacher_id",
+            "teacherId",
+            "teacher_user",
+            "teacherUser"
+        )
+
+    private fun teacherName(row: JSONObject): String =
+        firstNonBlank(
+            row,
+            "teacher_alias",
+            "teacherAlias",
+            "teacher_name",
+            "teacherName",
+            "teacher",
+            "teacher_display_name",
+            "teacherDisplayName",
+            "staff_name",
+            "staffName"
+        )
+
+    private fun rowMatchesTeacher(row: JSONObject, userId: String, displayName: String): Boolean {
+        val rowUserId = teacherUserId(row)
+        if (rowUserId.isNotBlank() && userId.isNotBlank() && rowUserId == userId) return true
+        return teacherMatches(displayName, teacherName(row))
+    }
+
+    private fun rowToTimetable(row: JSONObject, fallbackDate: String): TimetableItem? {
+        val period = row.optInt("period", 0)
+        if (period !in 1..7) return null
+        return TimetableItem(
+            date = firstNonBlank(row, "date", "lesson_date", "lessonDate").ifBlank { fallbackDate },
+            grade = row.optInt("grade", row.optInt("grade_no", 0)),
+            classCode = firstNonBlank(row, "class_code", "classCode", "class_name", "className", "class"),
+            period = period,
+            subject = firstNonBlank(row, "subject", "subject_name", "subjectName", "course_name", "courseName"),
+            teacher = teacherName(row),
+            room = firstNonBlank(row, "room", "classroom", "room_name", "roomName"),
+            startTime = firstNonBlank(row, "start_time", "startTime"),
+            endTime = firstNonBlank(row, "end_time", "endTime")
+        )
+    }
+
+    private fun distinctTimetable(rows: List<TimetableItem>): List<TimetableItem> =
+        rows.distinctBy {
+            listOf(it.date, it.period.toString(), it.grade.toString(), it.classCode, it.subject, it.room).joinToString("|")
+        }.sortedBy { it.period }
+
     fun fetchMyTimetable(date: String, userId: String, displayName: String = ""): List<TimetableItem> {
         val q = "?from=${URLEncoder.encode(date, "UTF-8")}&to=${URLEncoder.encode(date, "UTF-8")}"
-        val arr = request("/api/timetable$q").optJSONArray("data") ?: JSONArray()
-        return buildList {
-            for (i in 0 until arr.length()) {
-                val row = arr.optJSONObject(i) ?: continue
-                val rowUserId = row.optString("teacher_user_id", row.optString("teacherUserId"))
-                val teacherAlias = row.optString("teacher_alias", row.optString("teacherAlias"))
-                val matchesUser = if (rowUserId.isNotBlank()) {
-                    rowUserId == userId
-                } else {
-                    teacherMatches(displayName, teacherAlias)
-                }
-                if (!matchesUser) continue
-                val period = row.optInt("period", 0)
-                if (period !in 1..7) continue
-                add(TimetableItem(
-                    date = date,
-                    grade = row.optInt("grade", 0),
-                    classCode = row.optString("class_code", row.optString("classCode")),
-                    period = period,
-                    subject = row.optString("subject"),
-                    teacher = teacherAlias,
-                    room = row.optString("room"),
-                    startTime = row.optString("start_time", row.optString("startTime")),
-                    endTime = row.optString("end_time", row.optString("endTime"))
-                ))
+        val primary = request("/api/timetable$q").optJSONArray("data") ?: JSONArray()
+
+        val primaryMatches = buildList {
+            for (i in 0 until primary.length()) {
+                val row = primary.optJSONObject(i) ?: continue
+                if (!rowMatchesTeacher(row, userId, displayName)) continue
+                rowToTimetable(row, date)?.let(::add)
             }
-        }.sortedBy { it.period }
+        }
+        if (primaryMatches.isNotEmpty()) return distinctTimetable(primaryMatches)
+
+        // 일부 SCERP 시간표 응답은 개인 식별 필드를 생략할 수 있으므로,
+        // 전체 학급 시간표에서 교사명으로 한 번 더 조회한다.
+        val publicRows = request("/api/public/timetable$q").optJSONArray("data") ?: JSONArray()
+        val fallbackMatches = buildList {
+            for (i in 0 until publicRows.length()) {
+                val row = publicRows.optJSONObject(i) ?: continue
+                if (!teacherMatches(displayName, teacherName(row))) continue
+                rowToTimetable(row, date)?.let(::add)
+            }
+        }
+        return distinctTimetable(fallbackMatches)
     }
 
     fun fetchPublicTimetable(date: String): List<TimetableItem> {
@@ -123,21 +181,9 @@ class ScerpApi(private val store: LocalStore? = null) {
         return buildList {
             for (i in 0 until arr.length()) {
                 val row = arr.optJSONObject(i) ?: continue
-                val period = row.optInt("period", 0)
-                val grade = row.optInt("grade", 0)
-                val classCode = row.optString("class_code", row.optString("classCode"))
-                if (period !in 1..7 || grade <= 0 || classCode.isBlank()) continue
-                add(TimetableItem(
-                    date = row.optString("date", date),
-                    grade = grade,
-                    classCode = classCode,
-                    period = period,
-                    subject = row.optString("subject"),
-                    teacher = row.optString("teacher_alias", row.optString("teacherAlias")),
-                    room = row.optString("room"),
-                    startTime = row.optString("start_time", row.optString("startTime")),
-                    endTime = row.optString("end_time", row.optString("endTime"))
-                ))
+                val item = rowToTimetable(row, date) ?: continue
+                if (item.grade <= 0 || item.classCode.isBlank()) continue
+                add(item)
             }
         }
     }

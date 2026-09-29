@@ -1,8 +1,8 @@
 {
-  "version": "2.9.5",
-  "file": "SimpleTimetable-v2.9.5.exe",
-  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.9.5/SimpleTimetable-v2.9.5.exe",
-  "sha256": "390226b87a70f244324eadbf21b7719c9835a75cee697f491a8b6e182ccf2560",
-  "size": 21665041,
-  "notes": "Windows SimpleTimetable update metadata. Android releases are tracked separately in android-latest.json."
+  "version": "2.9.6",
+  "file": "SimpleTimetable-v2.9.6.exe",
+  "url": "https://github.com/KANG77556/simple-timetable-updates/releases/download/v2.9.6/SimpleTimetable-v2.9.6.exe",
+  "sha256": "34f837f6a8d4c3c5ebc520421e55c28d23397193123f7ec6053604e87d2e96c1",
+  "size": 38701861,
+  "notes": "Windows SimpleTimetable v2.9.6. Verified SCERP timetable rendering and separated Windows update metadata from Android releases."
 }

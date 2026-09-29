@@ -22,6 +22,7 @@ data class AppUiState(
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
     val classrooms: List<Classroom> = emptyList(),
+    val lastLoginId: String = "",
     val message: String = ""
 )
 
@@ -35,7 +36,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = store.loadMemos(),
             todos = store.loadTodos(),
-            calendar = store.loadCalendar()
+            calendar = store.loadCalendar(),
+            lastLoginId = store.loginId,
+            message = if (store.userId.isNotBlank() && store.sessionCookie.isBlank()) {
+                "업데이트 후 최초 1회 로그인이 필요합니다."
+            } else ""
         )
     )
     val state: StateFlow<AppUiState> = _state
@@ -45,6 +50,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val profile = api.login(loginId, password)
             store.userId = profile.userId
             store.displayName = profile.displayName
+            store.loginId = loginId.trim()
             _state.value = _state.value.copy(loggedIn = true, profile = profile)
             refreshTodayDirect(profile.userId)
         }

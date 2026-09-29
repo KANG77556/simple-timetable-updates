@@ -127,34 +127,103 @@ fun SimpleTimetableApp(vm: MainViewModel) {
 
 @Composable
 private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
-    var id by remember { mutableStateOf("") }
+    var id by remember(state.lastLoginId) { mutableStateOf(state.lastLoginId) }
     var password by remember { mutableStateOf("") }
 
-    Column(
-        Modifier.fillMaxSize().padding(28.dp),
-        verticalArrangement = Arrangement.Center
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Text("SimpleTimetable", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("밀성제일고등학교 · SCERP.cloud", style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(24.dp))
-        OutlinedTextField(id, { id = it }, label = { Text("아이디") }, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            password,
-            { password = it },
-            label = { Text("비밀번호") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = { vm.login(id, password) },
-            enabled = !state.loading && id.isNotBlank() && password.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("로그인") }
-        if (state.message.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            Text(state.message, color = MaterialTheme.colorScheme.error)
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 28.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "SimpleTimetable",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "밀성제일고등학교 · SCERP.cloud",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                )
+            ) {
+                Column(Modifier.padding(18.dp)) {
+                    Text(
+                        "로그인",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = id,
+                        onValueChange = { id = it },
+                        label = { Text("아이디") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("비밀번호") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = { vm.login(id, password) },
+                        enabled = !state.loading && id.isNotBlank() && password.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (state.loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("로그인")
+                        }
+                    }
+                }
+            }
+
+            if (state.message.isNotBlank()) {
+                Spacer(Modifier.height(14.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        state.message,
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "한 번 로그인하면 다음 실행부터 인증 세션을 자동으로 복원합니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

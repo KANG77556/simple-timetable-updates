@@ -1,7 +1,7 @@
 {
-  "versionCode": 13,
-  "versionName": "0.3.7",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.7/SCERP-Android-v0.3.7.apk",
-  "sha256": "4c77f018cb3dba2204716e85d1e548976860aedcedf4297ae9a66281cebb1f73",
-  "notes": "v0.3.7: 앱 재시작 후 로그인 표시만 남고 SCERP 인증 세션이 사라져 전자칠판 방송에서 '로그인이 필요합니다'가 발생하던 문제를 수정했습니다. 로그인 쿠키를 안전하게 복원하고 세션 만료 시 로그인 화면으로 전환합니다."
+  "versionCode": 14,
+  "versionName": "0.3.8",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.8/SCERP-Android-v0.3.8.apk",
+  "sha256": "72444d1d63fa1720643844dc3e082841dbcdaaa3a6a188c7bd170c43678ae3c3",
+  "notes": "v0.3.8: 업데이트 직후 기존 인증 쿠키가 없는 사용자는 한 번만 다시 로그인하도록 안내하고, 이후에는 로그인 ID를 기억해 재입력을 줄이도록 로그인 화면을 개선했습니다."
 }

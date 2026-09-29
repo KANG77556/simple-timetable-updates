@@ -15,6 +15,10 @@ class LocalStore(context: Context) {
         get() = prefs.getString("display_name", "") ?: ""
         set(value) = prefs.edit().putString("display_name", value).apply()
 
+    var loginId: String
+        get() = prefs.getString("login_id", "") ?: ""
+        set(value) = prefs.edit().putString("login_id", value).apply()
+
     var sessionCookie: String
         get() = prefs.getString("session_cookie", "") ?: ""
         set(value) = prefs.edit().putString("session_cookie", value).apply()

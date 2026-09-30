@@ -1,7 +1,7 @@
 {
-  "versionCode": 35,
-  "versionName": "0.3.29",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.29/MilseongJeil-v0.3.29.apk",
-  "sha256": "0e9aa78f2c2cf1dc99e7391769724f669acc630897dd9f51913cc2a3e91f6ab2",
-  "notes": "v0.3.29: 주간표 셀 높이와 정보 배치를 개선해 과목명·교사·교실 가독성을 높였습니다."
+  "versionCode": 36,
+  "versionName": "0.3.30",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.30/MilseongJeil-v0.3.30.apk",
+  "sha256": "04542ae129e5bade4af9b9b1a07e823bbf3bffdd5ece94c6da9e0f86dc3f7d8c",
+  "notes": "v0.3.30: 학교 건물 사진을 반영한 심플한 런처 아이콘을 적용하고 메모 제목, 중요도, 보관함, 검색 기능을 강화했습니다."
 }

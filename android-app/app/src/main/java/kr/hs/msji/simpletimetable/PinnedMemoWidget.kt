@@ -30,6 +30,9 @@ class PinnedMemoWidget : AppWidgetProvider() {
                 .maxByOrNull { it.updatedAt }
 
             val views = RemoteViews(context.packageName, R.layout.pinned_memo_widget)
+            views.setTextViewTextSize(R.id.memo_widget_title, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 17f))
+            views.setTextViewTextSize(R.id.memo_widget_text, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 13f))
+            views.setTextViewTextSize(R.id.memo_widget_meta, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
             if (memo == null) {
                 views.setTextViewText(R.id.memo_widget_title, "고정된 메모가 없습니다.")
                 views.setTextViewText(R.id.memo_widget_text, "앱에서 자주 보는 메모를 고정해 보세요.")

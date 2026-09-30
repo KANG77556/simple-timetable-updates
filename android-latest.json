@@ -1,7 +1,7 @@
 {
-  "versionCode": 44,
-  "versionName": "0.3.38",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.38/MilseongJeil-v0.3.38.apk",
-  "sha256": "e7ba023aa28962f337ac431f04c515cc8bfd3f5064b4993fec392b239a719fc0",
-  "notes": "v0.3.38: 기존 오늘 시간표 위젯에 더해 다음 수업, 오늘 업무 요약, 고정 메모 위젯 3종을 추가했습니다."
+  "versionCode": 45,
+  "versionName": "0.3.39",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.39/MilseongJeil-v0.3.39.apk",
+  "sha256": "eab8ca45af93affb86ba48ab6f4cc1fb7de2e368abee4e0454ef5ec25952425b",
+  "notes": "v0.3.39: 추가 위젯 3종의 삼성 위젯 선택 화면 미리보기를 실제 위젯 UI로 수정했습니다."
 }

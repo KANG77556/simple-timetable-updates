@@ -120,7 +120,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
-    fun addMemo(text: String, category: String = "일반", checklist: Boolean = false) {
+    fun addMemo(
+        text: String,
+        category: String = "일반",
+        checklist: Boolean = false,
+        title: String = "",
+        priority: Int = 0
+    ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
         val checks = if (checklist) {
@@ -139,14 +145,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             updatedAt = now,
             category = category,
             checklist = checklist,
-            checkItems = checks
+            checkItems = checks,
+            title = title.trim(),
+            priority = priority.coerceIn(0, 2)
         )
         store.saveMemos(list)
         store.clearMemoDraft()
         _state.value = _state.value.copy(memos = list)
     }
 
-    fun updateMemo(id: Long, text: String, category: String? = null, checklist: Boolean? = null) {
+    fun updateMemo(
+        id: Long,
+        text: String,
+        category: String? = null,
+        checklist: Boolean? = null,
+        title: String? = null,
+        priority: Int? = null
+    ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map { memo ->
@@ -165,7 +180,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     updatedAt = now,
                     category = category ?: memo.category,
                     checklist = nextChecklist,
-                    checkItems = nextChecks
+                    checkItems = nextChecks,
+                    title = title?.trim() ?: memo.title,
+                    priority = priority?.coerceIn(0, 2) ?: memo.priority
                 )
             }
         }
@@ -196,6 +213,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(memos = list)
     }
 
+    fun toggleMemoArchive(id: Long) {
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(archived = !it.archived, updatedAt = System.currentTimeMillis()) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
     fun memoToTodo(id: Long, dueDate: String) {
         val memo = _state.value.memos.firstOrNull { it.id == id } ?: return
         addTodo(memo.text, dueDate)
@@ -206,15 +231,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         addCalendar(memo.text.lineSequence().firstOrNull().orEmpty().ifBlank { memo.text }, date)
     }
 
-    fun saveMemoDraft(text: String, category: String, checklist: Boolean) {
+    fun saveMemoDraft(
+        text: String,
+        category: String,
+        checklist: Boolean,
+        title: String = "",
+        priority: Int = 0
+    ) {
         store.memoDraftText = text
         store.memoDraftCategory = category
         store.memoDraftChecklist = checklist
+        store.memoDraftTitle = title
+        store.memoDraftPriority = priority
     }
 
     fun memoDraftText(): String = store.memoDraftText
     fun memoDraftCategory(): String = store.memoDraftCategory
     fun memoDraftChecklist(): Boolean = store.memoDraftChecklist
+    fun memoDraftTitle(): String = store.memoDraftTitle
+    fun memoDraftPriority(): Int = store.memoDraftPriority
 
     fun addTodo(text: String, dueDate: String) {
         if (text.isBlank()) return

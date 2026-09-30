@@ -1620,18 +1620,27 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var text by remember { mutableStateOf(vm.memoDraftText()) }
+    var title by remember { mutableStateOf(vm.memoDraftTitle()) }
     var query by remember { mutableStateOf("") }
     var editingId by remember { mutableStateOf<Long?>(null) }
     var category by remember { mutableStateOf(vm.memoDraftCategory()) }
     var checklist by remember { mutableStateOf(vm.memoDraftChecklist()) }
+    var priority by remember { mutableIntStateOf(vm.memoDraftPriority()) }
     var sortMode by remember { mutableStateOf("고정순") }
     var templateMenu by remember { mutableStateOf(false) }
+    var showArchive by remember { mutableStateOf(false) }
 
     val categories = listOf("일반", "수업", "행정", "학생", "회의", "개인")
-    val filteredMemos = remember(state.memos, query, category, sortMode) {
+    val filteredMemos = remember(state.memos, query, category, sortMode, showArchive) {
         val base = state.memos
             .asSequence()
-            .filter { query.isBlank() || it.text.contains(query.trim(), ignoreCase = true) || it.category.contains(query.trim(), ignoreCase = true) }
+            .filter { it.archived == showArchive }
+            .filter {
+                query.isBlank() ||
+                    it.title.contains(query.trim(), ignoreCase = true) ||
+                    it.text.contains(query.trim(), ignoreCase = true) ||
+                    it.category.contains(query.trim(), ignoreCase = true)
+            }
             .filter { category == "일반" || it.category == category }
             .toList()
         when (sortMode) {
@@ -1694,7 +1703,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                         text = value
                                         category = if (name == "회의") "회의" else if (name == "수업") "수업" else "학생"
                                         checklist = false
-                                        vm.saveMemoDraft(text, category, checklist)
+                                        vm.saveMemoDraft(text, category, checklist, title, priority)
                                         templateMenu = false
                                     }
                                 )
@@ -1705,7 +1714,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         selected = checklist,
                         onClick = {
                             checklist = !checklist
-                            vm.saveMemoDraft(text, category, checklist)
+                            vm.saveMemoDraft(text, category, checklist, title, priority)
                         },
                         label = { Text("체크리스트") }
                     )
@@ -1718,11 +1727,27 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 }
 
                 OutlinedTextField(
+                    value = title,
+                    onValueChange = {
+                        if (it.length <= 60) {
+                            title = it
+                            vm.saveMemoDraft(text, category, checklist, title, priority)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("제목 (선택)") },
+                    shape = RoundedCornerShape(15.dp)
+                )
+
+                Spacer(Modifier.height(7.dp))
+
+                OutlinedTextField(
                     value = text,
                     onValueChange = {
                         if (it.length <= 1000) {
                             text = it
-                            vm.saveMemoDraft(text, category, checklist)
+                            vm.saveMemoDraft(text, category, checklist, title, priority)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -1745,10 +1770,35 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             selected = category == item,
                             onClick = {
                                 category = item
-                                vm.saveMemoDraft(text, category, checklist)
+                                vm.saveMemoDraft(text, category, checklist, title, priority)
                             },
                             label = { Text(item) }
                         )
+                    }
+                }
+
+                Spacer(Modifier.height(5.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "중요도",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    listOf(0 to "보통", 1 to "중요", 2 to "긴급").forEach { (value, label) ->
+                        FilterChip(
+                            selected = priority == value,
+                            onClick = {
+                                priority = value
+                                vm.saveMemoDraft(text, category, checklist, title, priority)
+                            },
+                            label = { Text(label) }
+                        )
+                        Spacer(Modifier.width(4.dp))
                     }
                 }
 
@@ -1798,7 +1848,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            placeholder = { Text("내용·카테고리 검색") },
+            placeholder = { Text("제목·내용·카테고리 검색") },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "메모 검색") },
             trailingIcon = {
                 if (query.isNotBlank()) {
@@ -1824,6 +1874,19 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            FilterChip(
+                selected = showArchive,
+                onClick = { showArchive = !showArchive },
+                label = { Text(if (showArchive) "보관함 보는 중" else "보관함") }
+            )
         }
 
         Spacer(Modifier.height(7.dp))
@@ -1883,6 +1946,27 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 )
                             }
 
+                            if (memo.title.isNotBlank()) {
+                                Text(
+                                    memo.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(4.dp))
+                            }
+
+                            if (memo.priority > 0) {
+                                Text(
+                                    if (memo.priority == 2) "긴급" else "중요",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (memo.priority == 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.height(4.dp))
+                            }
+
                             Spacer(Modifier.height(8.dp))
 
                             if (memo.checklist && memo.checkItems.isNotEmpty()) {
@@ -1920,14 +2004,19 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 }
                                 TextButton(onClick = { vm.memoToTodo(memo.id, today) }) { Text("TODO") }
                                 TextButton(onClick = { vm.memoToCalendar(memo.id, today) }) { Text("일정") }
+                                TextButton(onClick = { vm.toggleMemoArchive(memo.id) }) {
+                                    Text(if (memo.archived) "복원" else "보관")
+                                }
                                 Spacer(Modifier.weight(1f))
                                 TextButton(
                                     onClick = {
                                         editingId = memo.id
                                         text = memo.text
+                                        title = memo.title
                                         category = memo.category
                                         checklist = memo.checklist
-                                        vm.saveMemoDraft(text, category, checklist)
+                                        priority = memo.priority
+                                        vm.saveMemoDraft(text, category, checklist, title, priority)
                                     }
                                 ) {
                                     Icon(Icons.Filled.Edit, contentDescription = "메모 수정", modifier = Modifier.size(17.dp))

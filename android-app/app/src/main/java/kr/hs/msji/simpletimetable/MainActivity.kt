@@ -275,6 +275,8 @@ private fun SettingsScreen(
     themeMode: AppThemeMode,
     onThemeModeChange: (AppThemeMode) -> Unit
 ) {
+    val context = LocalContext.current
+    var widgetFontScale by remember { mutableFloatStateOf(WidgetDisplaySettings.fontScale(context)) }
     Column(
         Modifier
             .fillMaxSize()
@@ -310,6 +312,49 @@ private fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            "위젯 글자 크기",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "홈 화면 위젯의 글자 크기를 조절합니다.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    WidgetDisplaySettings.options.forEach { (scale, label) ->
+                        FilterChip(
+                            selected = kotlin.math.abs(widgetFontScale - scale) < 0.01f,
+                            onClick = {
+                                widgetFontScale = scale
+                                WidgetDisplaySettings.setFontScale(context, scale)
+                                WidgetDisplaySettings.refreshAllWidgets(context)
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "현재 " + (widgetFontScale * 100).toInt() + "% · 변경 즉시 위젯에 적용됩니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 

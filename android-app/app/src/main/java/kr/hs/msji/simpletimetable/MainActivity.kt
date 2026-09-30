@@ -1511,18 +1511,182 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
     var text by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(schoolToday().toString()) }
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("TODO", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        OutlinedTextField(text, { text = it }, label = { Text("할 일") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(date, { date = it }, label = { Text("마감일 YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { vm.addTodo(text, date); text = "" }, modifier = Modifier.align(Alignment.End)) { Text("추가") }
-        LazyColumn {
-            items(state.todos, key = { it.id }) { todo ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = todo.done, onCheckedChange = { vm.toggleTodo(todo.id) })
-                    Column {
-                        Text(todo.text, fontWeight = if (todo.done) FontWeight.Normal else FontWeight.SemiBold)
-                        Text(todo.dueDate, style = MaterialTheme.typography.labelSmall)
+    var showCompleted by remember { mutableStateOf(false) }
+
+    val today = schoolToday()
+    val activeTodos = remember(state.todos) { state.todos.filterNot { it.done }.sortedBy { it.dueDate } }
+    val completedTodos = remember(state.todos) { state.todos.filter { it.done }.sortedByDescending { it.dueDate } }
+    val visibleTodos = if (showCompleted) completedTodos else activeTodos
+    val overdueCount = activeTodos.count {
+        runCatching { LocalDate.parse(it.dueDate).isBefore(today) }.getOrDefault(false)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("TODO", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "해야 할 일을 마감일 기준으로 관리하세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = if (overdueCount > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    if (overdueCount > 0) "지연 " + overdueCount + "개" else "진행 " + activeTodos.size + "개",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(14.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("할 일을 입력하세요") },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        label = { Text("마감일") },
+                        placeholder = { Text("YYYY-MM-DD") },
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            vm.addTodo(text, date)
+                            text = ""
+                        },
+                        enabled = text.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("추가")
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
+                    AssistChip(onClick = { date = today.plusDays(1).toString() }, label = { Text("내일") })
+                    AssistChip(onClick = { date = today.plusWeeks(1).toString() }, label = { Text("다음 주") })
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            FilterChip(
+                selected = !showCompleted,
+                onClick = { showCompleted = false },
+                label = { Text("진행 중 " + activeTodos.size) },
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = showCompleted,
+                onClick = { showCompleted = true },
+                label = { Text("완료 " + completedTodos.size) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        if (visibleTodos.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 36.dp, horizontal = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        if (showCompleted) "완료된 할 일이 없습니다." else "진행 중인 할 일이 없습니다.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (showCompleted) "완료한 항목이 여기에 모입니다." else "위 입력창에서 할 일을 추가해 보세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(bottom = 12.dp)
+            ) {
+                items(visibleTodos, key = { it.id }) { todo ->
+                    val due = runCatching { LocalDate.parse(todo.dueDate) }.getOrNull()
+                    val overdue = !todo.done && due != null && due.isBefore(today)
+                    val dueToday = due == today
+
+                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = todo.done,
+                                onCheckedChange = { vm.toggleTodo(todo.id) }
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    todo.text,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (todo.done) FontWeight.Normal else FontWeight.SemiBold,
+                                    color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    when {
+                                        overdue -> "마감 지남 · " + todo.dueDate
+                                        dueToday -> "오늘 마감 · " + todo.dueDate
+                                        else -> "마감 " + todo.dueDate
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(onClick = { vm.deleteTodo(todo.id) }) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "할 일 삭제",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1534,17 +1698,161 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
 private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     var title by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(schoolToday().toString()) }
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("캘린더", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        OutlinedTextField(title, { title = it }, label = { Text("일정") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(date, { date = it }, label = { Text("날짜 YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { vm.addCalendar(title, date); title = "" }, modifier = Modifier.align(Alignment.End)) { Text("등록") }
-        LazyColumn {
-            items(state.calendar.sortedBy { it.date }, key = { it.id }) { item ->
-                ListItem(
-                    headlineContent = { Text(item.title) },
-                    supportingContent = { Text(item.date) }
+    val today = schoolToday()
+    val upcoming = remember(state.calendar) {
+        state.calendar.sortedBy { it.date }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("캘린더", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "학교 일정과 개인 일정을 한곳에서 관리하세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                Text(
+                    upcoming.size.toString() + "개",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(14.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("일정을 입력하세요") },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        label = { Text("날짜") },
+                        placeholder = { Text("YYYY-MM-DD") },
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            vm.addCalendar(title, date)
+                            title = ""
+                        },
+                        enabled = title.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("등록")
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
+                    AssistChip(onClick = { date = today.plusDays(1).toString() }, label = { Text("내일") })
+                    AssistChip(onClick = { date = today.plusWeeks(1).toString() }, label = { Text("다음 주") })
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            "예정 일정",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(7.dp))
+
+        if (upcoming.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 36.dp, horizontal = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("등록된 일정이 없습니다.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "위 입력창에서 첫 일정을 등록해 보세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(bottom = 12.dp)
+            ) {
+                items(upcoming, key = { it.id }) { item ->
+                    val itemDate = runCatching { LocalDate.parse(item.date) }.getOrNull()
+                    val isToday = itemDate == today
+                    val isPast = itemDate?.isBefore(today) == true
+                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(52.dp),
+                                shape = RoundedCornerShape(15.dp),
+                                color = if (isToday) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        itemDate?.dayOfMonth?.toString() ?: "-",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        if (isToday) "오늘" else (itemDate?.monthValue?.toString()?.plus("월") ?: ""),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    item.date + if (isPast) " · 지난 일정" else "",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isPast) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(onClick = { vm.deleteCalendar(item.id) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "일정 삭제", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1555,41 +1863,189 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
     var text by remember { mutableStateOf("") }
     var tts by remember { mutableStateOf(false) }
     val selected = remember { mutableStateListOf<String>() }
+    val onlineTotal = state.classrooms.sumOf { it.onlineCount }
+    val allSelected = state.classrooms.isNotEmpty() && state.classrooms.all { it.id in selected }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("전자칠판 방송", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("전자칠판 방송", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "교실을 선택해 공지 또는 TTS 음성 방송을 전송합니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             TextButton(onClick = vm::loadClassrooms) { Text("새로고침") }
         }
-        OutlinedTextField(text, { text = it }, label = { Text("방송 내용") }, modifier = Modifier.fillMaxWidth())
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(tts, { tts = it })
-            Text("TTS 음성 방송")
-        }
-        Text("수신 교실", fontWeight = FontWeight.SemiBold)
-        LazyColumn(Modifier.weight(1f)) {
-            items(state.classrooms, key = { it.id }) { room ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = room.id in selected,
-                        onCheckedChange = {
-                            if (it) selected.add(room.id) else selected.remove(room.id)
-                        }
-                    )
-                    Text(room.name, Modifier.weight(1f))
-                    Text("온라인 ${room.onlineCount}")
+
+        ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(14.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { if (it.length <= 500) text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5,
+                    placeholder = { Text("방송 내용을 입력하세요") },
+                    supportingText = {
+                        Text(
+                            text.length.toString() + "/500",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.End
+                        )
+                    },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(checked = tts, onCheckedChange = { tts = it })
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("TTS 음성 방송", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (tts) "수신 전자칠판에서 내용을 음성으로 읽습니다." else "텍스트 공지만 전송합니다.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("수신 교실", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(
+                selected.size.toString() + "개 선택 · 온라인 " + onlineTotal,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AssistChip(
+                onClick = {
+                    selected.clear()
+                    if (!allSelected) selected.addAll(state.classrooms.map { it.id })
+                },
+                label = { Text(if (allSelected) "전체 해제" else "전체 선택") }
+            )
+            AssistChip(
+                onClick = {
+                    selected.clear()
+                    selected.addAll(state.classrooms.filter { it.onlineCount > 0 }.map { it.id })
+                },
+                label = { Text("온라인만") }
+            )
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        if (state.classrooms.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(20.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("등록된 수신 교실이 없습니다.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "새로고침하여 전자칠판 연결 상태를 확인하세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(state.classrooms, key = { it.id }) { room ->
+                    val checked = room.id in selected
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.60f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = {
+                                    if (it) selected.add(room.id) else selected.remove(room.id)
+                                }
+                            )
+                            Text(room.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (room.onlineCount > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    if (room.onlineCount > 0) "온라인 " + room.onlineCount else "오프라인",
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (room.onlineCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Button(
-            onClick = { vm.sendBroadcast(selected.toList(), text, tts) },
+            onClick = {
+                vm.sendBroadcast(selected.toList(), text, tts)
+                text = ""
+            },
             enabled = selected.isNotEmpty() && text.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("방송 보내기") }
-        if (state.message.isNotBlank()) Text(state.message)
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                if (selected.isEmpty()) "수신 교실을 선택하세요"
+                else "선택한 " + selected.size + "개 교실에 방송 보내기"
+            )
+        }
+
+        if (state.message.isNotBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                state.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.height(8.dp))
     }
 }
-
 
 private fun timetableSubjectColor(subject: String): Color {
     val palette = listOf(

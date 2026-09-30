@@ -18,7 +18,18 @@ data class TimetableItem(
     val endTime: String = ""
 )
 
-data class MemoItem(val id: Long, val text: String, val createdAt: Long)
+data class MemoCheckItem(val text: String, val done: Boolean = false)
+
+data class MemoItem(
+    val id: Long,
+    val text: String,
+    val createdAt: Long,
+    val updatedAt: Long = createdAt,
+    val pinned: Boolean = false,
+    val category: String = "일반",
+    val checklist: Boolean = false,
+    val checkItems: List<MemoCheckItem> = emptyList()
+)
 data class TodoItem(val id: Long, val text: String, val done: Boolean, val dueDate: String)
 data class CalendarItem(val id: Long, val title: String, val date: String)
 data class Classroom(val id: String, val name: String, val onlineCount: Int = 0)

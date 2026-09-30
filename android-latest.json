@@ -1,7 +1,7 @@
 {
-  "versionCode": 34,
-  "versionName": "0.3.28",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.28/MilseongJeil-v0.3.28.apk",
-  "sha256": "01ba63c52c31b4d06bca736c7cc20b557f77498caec7063f929be100e14e86e7",
-  "notes": "v0.3.28: 전체 시간표는 주간표만 표시하고, 동일 과목은 항상 같은 색상을 사용하도록 과목별 색상 팔레트를 24종으로 확대했습니다."
+  "versionCode": 35,
+  "versionName": "0.3.29",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.29/MilseongJeil-v0.3.29.apk",
+  "sha256": "0e9aa78f2c2cf1dc99e7391769724f669acc630897dd9f51913cc2a3e91f6ab2",
+  "notes": "v0.3.29: 주간표 셀 높이와 정보 배치를 개선해 과목명·교사·교실 가독성을 높였습니다."
 }

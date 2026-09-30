@@ -28,7 +28,10 @@ data class MemoItem(
     val pinned: Boolean = false,
     val category: String = "일반",
     val checklist: Boolean = false,
-    val checkItems: List<MemoCheckItem> = emptyList()
+    val checkItems: List<MemoCheckItem> = emptyList(),
+    val title: String = "",
+    val priority: Int = 0,
+    val archived: Boolean = false
 )
 data class TodoItem(val id: Long, val text: String, val done: Boolean, val dueDate: String)
 data class CalendarItem(val id: Long, val title: String, val date: String)

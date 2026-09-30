@@ -120,17 +120,71 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
-    fun addMemo(text: String) {
+    fun addMemo(text: String, category: String = "일반", checklist: Boolean = false) {
         if (text.isBlank()) return
-        val list = _state.value.memos + MemoItem(System.currentTimeMillis(), text.trim(), System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val checks = if (checklist) {
+            text.lineSequence()
+                .map { it.trim().removePrefix("-").removePrefix("•").trim() }
+                .filter { it.isNotBlank() }
+                .map { MemoCheckItem(it, false) }
+                .toList()
+        } else {
+            emptyList()
+        }
+        val list = _state.value.memos + MemoItem(
+            id = now,
+            text = text.trim(),
+            createdAt = now,
+            updatedAt = now,
+            category = category,
+            checklist = checklist,
+            checkItems = checks
+        )
+        store.saveMemos(list)
+        store.clearMemoDraft()
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun updateMemo(id: Long, text: String, category: String? = null, checklist: Boolean? = null) {
+        if (text.isBlank()) return
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id) memo else {
+                val nextChecklist = checklist ?: memo.checklist
+                val nextChecks = if (nextChecklist) {
+                    val oldByText = memo.checkItems.associateBy { it.text }
+                    text.lineSequence()
+                        .map { it.trim().removePrefix("-").removePrefix("•").trim() }
+                        .filter { it.isNotBlank() }
+                        .map { value -> oldByText[value] ?: MemoCheckItem(value, false) }
+                        .toList()
+                } else emptyList()
+                memo.copy(
+                    text = text.trim(),
+                    updatedAt = now,
+                    category = category ?: memo.category,
+                    checklist = nextChecklist,
+                    checkItems = nextChecks
+                )
+            }
+        }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }
 
-    fun updateMemo(id: Long, text: String) {
-        if (text.isBlank()) return
-        val list = _state.value.memos.map {
-            if (it.id == id) it.copy(text = text.trim()) else it
+    fun toggleMemoPin(id: Long) {
+        val list = _state.value.memos.map { if (it.id == id) it.copy(pinned = !it.pinned, updatedAt = System.currentTimeMillis()) else it }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun toggleMemoCheck(id: Long, index: Int) {
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id || index !in memo.checkItems.indices) memo else {
+                val checks = memo.checkItems.mapIndexed { i, item -> if (i == index) item.copy(done = !item.done) else item }
+                memo.copy(checkItems = checks, updatedAt = System.currentTimeMillis())
+            }
         }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
@@ -141,6 +195,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }
+
+    fun memoToTodo(id: Long, dueDate: String) {
+        val memo = _state.value.memos.firstOrNull { it.id == id } ?: return
+        addTodo(memo.text, dueDate)
+    }
+
+    fun memoToCalendar(id: Long, date: String) {
+        val memo = _state.value.memos.firstOrNull { it.id == id } ?: return
+        addCalendar(memo.text.lineSequence().firstOrNull().orEmpty().ifBlank { memo.text }, date)
+    }
+
+    fun saveMemoDraft(text: String, category: String, checklist: Boolean) {
+        store.memoDraftText = text
+        store.memoDraftCategory = category
+        store.memoDraftChecklist = checklist
+    }
+
+    fun memoDraftText(): String = store.memoDraftText
+    fun memoDraftCategory(): String = store.memoDraftCategory
+    fun memoDraftChecklist(): Boolean = store.memoDraftChecklist
 
     fun addTodo(text: String, dueDate: String) {
         if (text.isBlank()) return

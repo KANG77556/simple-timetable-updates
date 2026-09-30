@@ -43,6 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -275,6 +278,8 @@ private fun SettingsScreen(
     themeMode: AppThemeMode,
     onThemeModeChange: (AppThemeMode) -> Unit
 ) {
+    val context = LocalContext.current
+    var widgetFontScale by remember { mutableFloatStateOf(WidgetDisplaySettings.fontScale(context)) }
     Column(
         Modifier
             .fillMaxSize()
@@ -310,6 +315,49 @@ private fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            "위젯 글자 크기",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "홈 화면 위젯의 글자 크기를 조절합니다.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    WidgetDisplaySettings.options.forEach { (scale, label) ->
+                        FilterChip(
+                            selected = kotlin.math.abs(widgetFontScale - scale) < 0.01f,
+                            onClick = {
+                                widgetFontScale = scale
+                                WidgetDisplaySettings.setFontScale(context, scale)
+                                WidgetDisplaySettings.refreshAllWidgets(context)
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "현재 " + (widgetFontScale * 100).toInt() + "% · 변경 즉시 위젯에 적용됩니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -1771,6 +1819,11 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val memoScrollState = rememberScrollState()
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
     var text by remember { mutableStateOf(vm.memoDraftText()) }
     var title by remember { mutableStateOf(vm.memoDraftTitle()) }
     var query by remember { mutableStateOf("") }
@@ -1878,9 +1931,10 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(memoScrollState)
+            .imePadding()
             .padding(horizontal = 14.dp)
-            .padding(bottom = 110.dp)
+            .padding(bottom = 24.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
@@ -1892,6 +1946,14 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
+            if (imeVisible) {
+                TextButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    }
+                ) { Text("키보드 닫기") }
+            }
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                 Text(
                     activeMemoCount.toString() + "개",

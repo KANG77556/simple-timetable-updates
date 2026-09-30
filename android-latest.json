@@ -1,7 +1,7 @@
 {
-  "versionCode": 25,
-  "versionName": "0.3.19",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.19/MilseongJeil-v0.3.19.apk",
-  "sha256": "535ca2f4041aa002bea582af1bea9cab290b6b5b432b088ac98aae06582d6a9f",
-  "notes": "v0.3.19: 메모 화면을 카드형으로 고도화하고 검색, 수정, 삭제, 글자 수 표시, 작성 시각, 빈 상태 안내를 추가했습니다."
+  "versionCode": 26,
+  "versionName": "0.3.20",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.20/MilseongJeil-v0.3.20.apk",
+  "sha256": "46d6df12342e5653aff0a3bed85c7a91a0571abb2f5f270dee11524ef5f4818c",
+  "notes": "v0.3.20: 휴대폰에서는 요일별 보기를 기본으로 하고 주간표 전환 버튼, 월~금 탭, 큰 세로 카드형 수업 표시를 적용했습니다."
 }

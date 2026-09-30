@@ -6,6 +6,8 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="밀성제일고"
         android:theme="@style/Theme.SimpleTimetable">
         <activity

@@ -52,5 +52,38 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/timetable_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".NextClassWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_class_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".TodaySummaryWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_summary_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".PinnedMemoWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pinned_memo_widget_info" />
+        </receiver>
     </application>
 </manifest>

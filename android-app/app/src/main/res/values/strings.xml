@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">SCERP</string>
     <string name="widget_description">현재·다음 수업, 오늘 시간표, 할 일과 일정을 한눈에 확인하는 시간표 위젯</string>
+    <string name="widget_next_description">현재 또는 다음 수업과 남은 시간을 빠르게 확인하는 위젯</string>
+    <string name="widget_summary_description">오늘 TODO, 일정, 고정 메모 개수를 한눈에 보는 위젯</string>
+    <string name="widget_memo_description">최근 고정 메모를 홈 화면에서 바로 확인하는 위젯</string>
 </resources>

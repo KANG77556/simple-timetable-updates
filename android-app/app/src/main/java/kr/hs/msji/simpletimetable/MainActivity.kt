@@ -1738,7 +1738,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp)
+            .padding(bottom = 110.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
@@ -2083,12 +2085,10 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-                contentPadding = PaddingValues(bottom = 14.dp)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                items(filteredMemos, key = { it.id }) { memo ->
+                filteredMemos.forEach { memo ->
                     ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -29,6 +29,13 @@ data class AppUiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
     private val api = ScerpApi(store)
+    private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
+    private val initialMemos = store.loadMemos().let { items ->
+        val cutoff = System.currentTimeMillis() - trashRetentionMillis
+        val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
+        if (cleaned.size != items.size) store.saveMemos(cleaned)
+        cleaned
+    }
     private val _state = MutableStateFlow(
         AppUiState(
             loggedIn = store.userId.isNotBlank() && store.sessionCookie.isNotBlank(),

@@ -2,6 +2,8 @@ package kr.hs.msji.simpletimetable
 
 import android.Manifest
 import android.app.Activity
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -1903,6 +1905,22 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         }
                     }
 
+                    if (pendingAttachments.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            pendingAttachments.forEachIndexed { index, uri ->
+                                AssistChip(
+                                    onClick = {
+                                        pendingAttachments = pendingAttachments.filterNot { it == uri }
+                                    },
+                                    label = { Text("첨부 " + (index + 1) + " 삭제") }
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(Modifier.height(5.dp))
 
                     Row(
@@ -2241,6 +2259,39 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                         },
                                         label = { Text("내일 09:00") }
                                     )
+                                    AssistChip(
+                                        onClick = {
+                                            val now = java.time.ZonedDateTime.now(SCHOOL_ZONE)
+                                            DatePickerDialog(
+                                                context,
+                                                { _, year, month, day ->
+                                                    TimePickerDialog(
+                                                        context,
+                                                        { _, hour, minute ->
+                                                            val target = LocalDate.of(year, month + 1, day)
+                                                                .atTime(hour, minute)
+                                                                .atZone(SCHOOL_ZONE)
+                                                                .toInstant()
+                                                                .toEpochMilli()
+                                                            if (target > System.currentTimeMillis()) {
+                                                                vm.setMemoReminder(memo.id, target)
+                                                                reminderMemoId = null
+                                                            }
+                                                        },
+                                                        now.hour,
+                                                        now.minute,
+                                                        true
+                                                    ).show()
+                                                },
+                                                now.year,
+                                                now.monthValue - 1,
+                                                now.dayOfMonth
+                                            ).apply {
+                                                datePicker.minDate = System.currentTimeMillis() - 1000L
+                                            }.show()
+                                        },
+                                        label = { Text("직접 지정") }
+                                    )
                                     if (memo.reminderAt > 0L) {
                                         AssistChip(
                                             onClick = {
@@ -2279,15 +2330,21 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                                 if (memo.title.isNotBlank()) append(memo.title).append("\n\n")
                                                 append(memo.text)
                                             }
-                                            context.startActivity(
-                                                Intent.createChooser(
-                                                    Intent(Intent.ACTION_SEND).apply {
-                                                        type = "text/plain"
-                                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                                    },
-                                                    "메모 공유"
-                                                )
-                                            )
+                                            val uris = ArrayList(memo.attachmentUris.map { Uri.parse(it) })
+                                            val shareIntent = if (uris.isEmpty()) {
+                                                Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                                }
+                                            } else {
+                                                Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                                    type = "*/*"
+                                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                            }
+                                            context.startActivity(Intent.createChooser(shareIntent, "메모 공유"))
                                         }
                                     ) { Text("공유") }
                                     TextButton(onClick = { vm.toggleMemoArchive(memo.id) }) {

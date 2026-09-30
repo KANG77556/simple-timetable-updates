@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -1096,17 +1098,230 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var text by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("메모", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    var query by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf<Long?>(null) }
+
+    val filteredMemos = remember(state.memos, query) {
+        state.memos
+            .asSequence()
+            .filter { query.isBlank() || it.text.contains(query.trim(), ignoreCase = true) }
+            .sortedByDescending { it.createdAt }
+            .toList()
+    }
+    val dateFormatter = remember {
+        DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREA)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "메모",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "빠르게 기록하고 필요한 내용을 다시 찾으세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    state.memos.size.toString() + "개",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp)
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { if (it.length <= 1000) text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 6,
+                    placeholder = {
+                        Text(if (editingId == null) "메모를 입력하세요" else "메모 내용을 수정하세요")
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    supportingText = {
+                        Text(
+                            text.length.toString() + "/1000",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.End
+                        )
+                    }
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (editingId != null) {
+                        TextButton(
+                            onClick = {
+                                editingId = null
+                                text = ""
+                            }
+                        ) {
+                            Text("취소")
+                        }
+                        Spacer(Modifier.width(6.dp))
+                    }
+
+                    Button(
+                        enabled = text.isNotBlank(),
+                        onClick = {
+                            val id = editingId
+                            if (id == null) {
+                                vm.addMemo(text)
+                            } else {
+                                vm.updateMemo(id, text)
+                            }
+                            text = ""
+                            editingId = null
+                        },
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text(if (editingId == null) "메모 추가" else "수정 저장")
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = { Text("메모 검색") },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "메모 검색") },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
+                    }
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(text, { text = it }, label = { Text("새 메모") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { vm.addMemo(text); text = "" }, modifier = Modifier.align(Alignment.End)) { Text("추가") }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(state.memos.reversed(), key = { it.id }) { memo ->
-                Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(memo.text, Modifier.weight(1f))
-                        TextButton(onClick = { vm.deleteMemo(memo.id) }) { Text("삭제") }
+
+        if (filteredMemos.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 34.dp, horizontal = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        if (query.isBlank()) "아직 저장된 메모가 없습니다." else "검색 결과가 없습니다.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        if (query.isBlank()) "위 입력창에서 첫 메모를 작성해 보세요." else "다른 검색어를 입력해 보세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 14.dp)
+            ) {
+                items(filteredMemos, key = { it.id }) { memo ->
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 15.dp, vertical = 13.dp)
+                        ) {
+                            Text(
+                                memo.text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 8,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val displayTime = remember(memo.createdAt) {
+                                    if (memo.createdAt > 0L) {
+                                        Instant.ofEpochMilli(memo.createdAt)
+                                            .atZone(SCHOOL_ZONE)
+                                            .format(dateFormatter)
+                                    } else {
+                                        ""
+                                    }
+                                }
+                                Text(
+                                    displayTime,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                TextButton(
+                                    onClick = {
+                                        editingId = memo.id
+                                        text = memo.text
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Edit,
+                                        contentDescription = "메모 수정",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("수정")
+                                }
+                                IconButton(onClick = { vm.deleteMemo(memo.id) }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "메모 삭제",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

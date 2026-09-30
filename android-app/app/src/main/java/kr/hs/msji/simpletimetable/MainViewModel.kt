@@ -127,6 +127,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(memos = list)
     }
 
+    fun updateMemo(id: Long, text: String) {
+        if (text.isBlank()) return
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(text = text.trim()) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
     fun deleteMemo(id: Long) {
         val list = _state.value.memos.filterNot { it.id == id }
         store.saveMemos(list)

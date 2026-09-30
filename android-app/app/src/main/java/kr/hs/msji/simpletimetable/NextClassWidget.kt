@@ -36,6 +36,10 @@ class NextClassWidget : AppWidgetProvider() {
             }
             val target = current ?: next
             val views = RemoteViews(context.packageName, R.layout.next_class_widget)
+            views.setTextViewTextSize(R.id.next_widget_label, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
+            views.setTextViewTextSize(R.id.next_widget_subject, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 20f))
+            views.setTextViewTextSize(R.id.next_widget_detail, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
+            views.setTextViewTextSize(R.id.next_widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 13f))
 
             if (target == null) {
                 views.setTextViewText(R.id.next_widget_label, "오늘")

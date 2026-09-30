@@ -1,0 +1,12 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_background">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="다음 수업" android:textColor="#8FC7FF" android:textStyle="bold" android:textSize="12sp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="회실" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="22sp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="1교시 · 3학년 경영2 · 공용실습실" android:textColor="#C7D3E0" android:textSize="12sp"/>
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="50분 후 시작" android:textColor="#8FC7FF" android:textStyle="bold" android:textSize="14sp"/>
+</LinearLayout>

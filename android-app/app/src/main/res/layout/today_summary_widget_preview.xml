@@ -10,12 +10,10 @@
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2" android:textColor="#8FC7FF" android:textStyle="bold" android:textSize="28sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TODO" android:textColor="#C9D5E2" android:textSize="11sp"/>
         </LinearLayout>
-        <Space android:layout_width="8dp" android:layout_height="1dp"/>
-        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:background="@drawable/widget_card_background">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:layout_marginEnd="6dp" android:gravity="center" android:orientation="vertical" android:background="@drawable/widget_card_background">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1" android:textColor="#8FC7FF" android:textStyle="bold" android:textSize="28sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="일정" android:textColor="#C9D5E2" android:textSize="11sp"/>
         </LinearLayout>
-        <Space android:layout_width="8dp" android:layout_height="1dp"/>
         <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:background="@drawable/widget_card_background">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3" android:textColor="#8FC7FF" android:textStyle="bold" android:textSize="28sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="고정 메모" android:textColor="#C9D5E2" android:textSize="11sp"/>

@@ -208,7 +208,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteMemo(id: Long) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(deletedAt = now, pinned = false, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun restoreMemo(id: Long) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(deletedAt = 0L, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun permanentlyDeleteMemo(id: Long) {
         val list = _state.value.memos.filterNot { it.id == id }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun addMemoAttachments(id: Long, uris: List<String>) {
+        if (uris.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id) memo else memo.copy(
+                attachmentUris = (memo.attachmentUris + uris).distinct(),
+                updatedAt = now
+            )
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun removeMemoAttachment(id: Long, uri: String) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id) memo else memo.copy(
+                attachmentUris = memo.attachmentUris.filterNot { it == uri },
+                updatedAt = now
+            )
+        }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }

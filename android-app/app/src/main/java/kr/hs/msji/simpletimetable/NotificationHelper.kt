@@ -14,6 +14,8 @@ import androidx.core.app.NotificationManagerCompat
 object NotificationHelper {
     private const val CHANNEL_ID = "timetable_changes"
     private const val CHANNEL_NAME = "시간표 알림"
+    private const val MEMO_CHANNEL_ID = "memo_reminders"
+    private const val MEMO_CHANNEL_NAME = "메모 알림"
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -26,6 +28,14 @@ object NotificationHelper {
                 description = "수업 및 시간표 변경 알림"
             }
             manager.createNotificationChannel(channel)
+            val memoChannel = NotificationChannel(
+                MEMO_CHANNEL_ID,
+                MEMO_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "메모 리마인더 알림"
+            }
+            manager.createNotificationChannel(memoChannel)
         }
     }
 
@@ -54,5 +64,34 @@ object NotificationHelper {
             .build()
 
         NotificationManagerCompat.from(context).notify(2001, notification)
+    }
+    fun showMemoReminder(context: Context, memoId: Long, title: String, text: String) {
+        ensureChannel(context)
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val intent = Intent(context, MainActivity::class.java)
+        val pending = PendingIntent.getActivity(
+            context,
+            3000 + ((memoId xor (memoId ushr 32)).toInt() and 0x3fff),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, MEMO_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(title)
+            .setContentText(text.ifBlank { "저장한 메모를 확인해 주세요." })
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text.ifBlank { "저장한 메모를 확인해 주세요." }))
+            .setAutoCancel(true)
+            .setContentIntent(pending)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(
+            4000 + ((memoId xor (memoId ushr 32)).toInt() and 0x3fff),
+            notification
+        )
     }
 }

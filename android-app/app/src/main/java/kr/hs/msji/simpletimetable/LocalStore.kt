@@ -55,9 +55,18 @@ class LocalStore(context: Context) {
                     .put("archived", memo.archived)
                     .put("attachmentUris", attachments)
                     .put("deletedAt", memo.deletedAt)
+                    .put("reminderAt", memo.reminderAt)
             )
         }
         prefs.edit().putString("memos", arr.toString()).apply()
+    }
+
+    fun exportMemosJson(): String = prefs.getString("memos", "[]") ?: "[]"
+
+    fun importMemosJson(raw: String): List<MemoItem> {
+        JSONArray(raw)
+        prefs.edit().putString("memos", raw).apply()
+        return loadMemos()
     }
 
     fun loadMemos(): List<MemoItem> = runCatching {
@@ -90,7 +99,8 @@ class LocalStore(context: Context) {
                 priority = o.optInt("priority", 0),
                 archived = o.optBoolean("archived", false),
                 attachmentUris = attachmentUris,
-                deletedAt = o.optLong("deletedAt", 0L)
+                deletedAt = o.optLong("deletedAt", 0L),
+                reminderAt = o.optLong("reminderAt", 0L)
             )
         }
     }.getOrDefault(emptyList())

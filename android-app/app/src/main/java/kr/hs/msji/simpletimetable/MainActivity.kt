@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
@@ -46,6 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -1638,6 +1640,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var templateMenu by remember { mutableStateOf(false) }
     var viewMode by remember { mutableStateOf("메모") }
     var pendingAttachments by remember { mutableStateOf<List<String>>(emptyList()) }
+    var reminderMemoId by remember { mutableStateOf<Long?>(null) }
+    var backupMessage by remember { mutableStateOf("") }
 
     val attachmentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -1669,6 +1673,36 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
     }
+
+    val backupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            backupMessage = runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(vm.exportMemosJson().toByteArray(Charsets.UTF_8))
+                } ?: error("백업 파일을 열 수 없습니다.")
+                "메모 백업을 저장했습니다."
+            }.getOrElse { "메모 백업 저장에 실패했습니다." }
+        }
+    }
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            backupMessage = runCatching {
+                val raw = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: error("백업 파일을 읽을 수 없습니다.")
+                if (vm.importMemosJson(raw)) "메모 백업을 복원했습니다." else "올바른 메모 백업 파일이 아닙니다."
+            }.getOrElse { "메모 백업 복원에 실패했습니다." }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        vm.cleanupExpiredTrash()
+    }
+
 
     val categories = listOf("일반", "수업", "행정", "학생", "회의", "개인")
     val filteredMemos = remember(state.memos, query, category, sortMode, viewMode) {
@@ -1724,6 +1758,37 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AssistChip(
+                onClick = {
+                    backupLauncher.launch("milseong_memos_" + schoolToday().toString() + ".json")
+                },
+                label = { Text("백업") }
+            )
+            AssistChip(
+                onClick = { restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                label = { Text("복원") }
+            )
+            Text(
+                "휴지통 30일 자동 정리",
+                modifier = Modifier.padding(vertical = 8.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (backupMessage.isNotBlank()) {
+            Text(
+                backupMessage,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
         }
 
         if (viewMode != "휴지통") {
@@ -2079,6 +2144,38 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             }
 
                             if (memo.attachmentUris.isNotEmpty()) {
+                                val imageUris = memo.attachmentUris.filter { uri ->
+                                    runCatching {
+                                        context.contentResolver.getType(Uri.parse(uri))?.startsWith("image/") == true
+                                    }.getOrDefault(false)
+                                }
+                                if (imageUris.isNotEmpty()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        imageUris.forEach { uri ->
+                                            Surface(
+                                                modifier = Modifier.size(84.dp),
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = MaterialTheme.colorScheme.surfaceVariant
+                                            ) {
+                                                AndroidView(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    factory = { ctx ->
+                                                        ImageView(ctx).apply {
+                                                            scaleType = ImageView.ScaleType.CENTER_CROP
+                                                            setImageURI(Uri.parse(uri))
+                                                        }
+                                                    },
+                                                    update = { imageView -> imageView.setImageURI(Uri.parse(uri)) }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
                                 Spacer(Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -2101,6 +2198,61 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 }
                             }
 
+                            if (memo.reminderAt > System.currentTimeMillis()) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "알림 · " + Instant.ofEpochMilli(memo.reminderAt).atZone(SCHOOL_ZONE)
+                                        .format(DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREA)),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            if (reminderMemoId == memo.id && memo.deletedAt == 0L) {
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    AssistChip(
+                                        onClick = {
+                                            vm.setMemoReminder(memo.id, System.currentTimeMillis() + 60L * 60L * 1000L)
+                                            reminderMemoId = null
+                                        },
+                                        label = { Text("1시간 후") }
+                                    )
+                                    AssistChip(
+                                        onClick = {
+                                            val now = System.currentTimeMillis()
+                                            var target = schoolToday().atTime(17, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
+                                            if (target <= now) {
+                                                target = schoolToday().plusDays(1).atTime(17, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
+                                            }
+                                            vm.setMemoReminder(memo.id, target)
+                                            reminderMemoId = null
+                                        },
+                                        label = { Text("17:00") }
+                                    )
+                                    AssistChip(
+                                        onClick = {
+                                            val target = schoolToday().plusDays(1).atTime(9, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
+                                            vm.setMemoReminder(memo.id, target)
+                                            reminderMemoId = null
+                                        },
+                                        label = { Text("내일 09:00") }
+                                    )
+                                    if (memo.reminderAt > 0L) {
+                                        AssistChip(
+                                            onClick = {
+                                                vm.clearMemoReminder(memo.id)
+                                                reminderMemoId = null
+                                            },
+                                            label = { Text("알림 해제") }
+                                        )
+                                    }
+                                }
+                            }
+
                             Spacer(Modifier.height(8.dp))
 
                             Row(
@@ -2118,6 +2270,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     }
                                     TextButton(onClick = { vm.memoToTodo(memo.id, today) }) { Text("TODO") }
                                     TextButton(onClick = { vm.memoToCalendar(memo.id, today) }) { Text("일정") }
+                                    TextButton(onClick = { reminderMemoId = if (reminderMemoId == memo.id) null else memo.id }) {
+                                        Text("알림")
+                                    }
                                     TextButton(
                                         onClick = {
                                             val shareText = buildString {

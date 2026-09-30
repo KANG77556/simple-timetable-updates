@@ -31,6 +31,18 @@
         </provider>
 
         <receiver
+            android:name=".MemoReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".MemoReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".TimetableWidget"
             android:exported="true">
             <intent-filter>

@@ -1,7 +1,7 @@
 {
-  "versionCode": 27,
-  "versionName": "0.3.21",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.21/MilseongJeil-v0.3.21.apk",
-  "sha256": "49a09153a355d8ecea0dc713e9dda5a7ed3d80a5c1888142b47804394049832c",
-  "notes": "v0.3.21: 전체 시간표 상단을 압축하고 검색·학년·학급 필터를 접기 방식으로 변경했습니다. 주 이동과 요일별 카드도 축소해 시간표 표시 영역을 넓혔습니다."
+  "versionCode": 28,
+  "versionName": "0.3.22",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.22/MilseongJeil-v0.3.22.apk",
+  "sha256": "1e8c0422b516fe8a25aa5c4d82c04cc2fb25117d195ab0fce66ab7fc0e24e178",
+  "notes": "v0.3.22: TODO, 캘린더, 전자칠판 방송 화면을 카드형 UI와 상태 표시 중심으로 고도화하고 삭제, 빠른 날짜 선택, 전체/온라인만 선택 기능을 추가했습니다."
 }

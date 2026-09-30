@@ -125,7 +125,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: String = "일반",
         checklist: Boolean = false,
         title: String = "",
-        priority: Int = 0
+        priority: Int = 0,
+        attachmentUris: List<String> = emptyList()
     ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
@@ -147,7 +148,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             checklist = checklist,
             checkItems = checks,
             title = title.trim(),
-            priority = priority.coerceIn(0, 2)
+            priority = priority.coerceIn(0, 2),
+            attachmentUris = attachmentUris.distinct()
         )
         store.saveMemos(list)
         store.clearMemoDraft()
@@ -160,7 +162,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: String? = null,
         checklist: Boolean? = null,
         title: String? = null,
-        priority: Int? = null
+        priority: Int? = null,
+        attachmentUris: List<String>? = null
     ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
@@ -182,7 +185,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     checklist = nextChecklist,
                     checkItems = nextChecks,
                     title = title?.trim() ?: memo.title,
-                    priority = priority?.coerceIn(0, 2) ?: memo.priority
+                    priority = priority?.coerceIn(0, 2) ?: memo.priority,
+                    attachmentUris = attachmentUris?.distinct() ?: memo.attachmentUris
                 )
             }
         }

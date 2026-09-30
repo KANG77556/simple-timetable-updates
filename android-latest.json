@@ -1,7 +1,7 @@
 {
-  "versionCode": 22,
-  "versionName": "0.3.16",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.16/MilseongJeil-v0.3.16.apk",
-  "sha256": "ddc04dcf94c55be2d8180be60f129ec31310ea43df8f9203d863be91a6fd921c",
-  "notes": "v0.3.16: 한국 시간대 기준 오늘 표시 수정, 빈 7교시 자동 숨김, 전체 시간표 상단 공간 최적화."
+  "versionCode": 23,
+  "versionName": "0.3.17",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.17/MilseongJeil-v0.3.17.apk",
+  "sha256": "1c24a23fce62e603551d060d77991f83fbbff2a97da06186e103b976712e8b28",
+  "notes": "v0.3.17: 전체 시간표를 월~금 주간 그리드로 변경하고 요일·날짜·오늘 강조, 이전/다음 주 이동, 과목별 컬러 셀, 빈 교시 자동 제외를 적용했습니다."
 }

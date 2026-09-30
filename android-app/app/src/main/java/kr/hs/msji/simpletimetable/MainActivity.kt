@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -1696,157 +1697,284 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
 
 @Composable
 private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
-    var title by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(schoolToday().toString()) }
     val today = schoolToday()
-    val upcoming = remember(state.calendar) {
-        state.calendar.sortedBy { it.date }
+    var visibleMonth by remember { mutableStateOf(YearMonth.from(today)) }
+    var selectedDate by remember { mutableStateOf(today) }
+    var title by remember { mutableStateOf("") }
+    var showAdd by remember { mutableStateOf(false) }
+
+    val firstDay = visibleMonth.atDay(1)
+    val leadingBlankCount = firstDay.dayOfWeek.value % 7
+    val daysInMonth = visibleMonth.lengthOfMonth()
+    val cells = remember(visibleMonth) {
+        List(42) { index ->
+            val day = index - leadingBlankCount + 1
+            if (day in 1..daysInMonth) visibleMonth.atDay(day) else null
+        }
     }
+    val eventsByDate = remember(state.calendar) {
+        state.calendar.groupBy { it.date }
+    }
+    val selectedEvents = eventsByDate[selectedDate.toString()].orEmpty().sortedBy { it.title }
+    val holidayName = KoreanHolidays.name(selectedDate)
+    val monthFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREA) }
+    val fullDateFormatter = remember { DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREA) }
 
     Column(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("캘린더", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    "학교 일정과 개인 일정을 한곳에서 관리하세요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Text("캘린더", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            TextButton(
+                onClick = {
+                    visibleMonth = YearMonth.from(today)
+                    selectedDate = today
+                }
+            ) { Text("오늘") }
+            TextButton(onClick = { showAdd = !showAdd }) {
+                Text(if (showAdd) "닫기" else "일정 추가")
             }
-            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                Text(
-                    upcoming.size.toString() + "개",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+        }
+
+        if (showAdd) {
+            ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        selectedDate.format(fullDateFormatter) + " 일정 추가",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(7.dp))
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("일정 내용을 입력하세요") },
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(Modifier.height(7.dp))
+                    Button(
+                        onClick = {
+                            vm.addCalendar(title, selectedDate.toString())
+                            title = ""
+                            showAdd = false
+                        },
+                        enabled = title.isNotBlank(),
+                        modifier = Modifier.align(Alignment.End),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { Text("등록") }
+                }
             }
+            Spacer(Modifier.height(8.dp))
         }
 
         ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(14.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
+            Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("일정을 입력하세요") },
-                    shape = RoundedCornerShape(14.dp)
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        label = { Text("날짜") },
-                        placeholder = { Text("YYYY-MM-DD") },
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Button(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
                         onClick = {
-                            vm.addCalendar(title, date)
-                            title = ""
-                        },
-                        enabled = title.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
-                        shape = RoundedCornerShape(14.dp)
+                            visibleMonth = visibleMonth.minusMonths(1)
+                            selectedDate = visibleMonth.atDay(1)
+                        }
                     ) {
-                        Text("등록")
+                        Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "이전 달")
+                    }
+                    Text(
+                        visibleMonth.format(monthFormatter),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = {
+                            visibleMonth = visibleMonth.plusMonths(1)
+                            selectedDate = visibleMonth.atDay(1)
+                        }
+                    ) {
+                        Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 달")
                     }
                 }
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
-                    AssistChip(onClick = { date = today.plusDays(1).toString() }, label = { Text("내일") })
-                    AssistChip(onClick = { date = today.plusWeeks(1).toString() }, label = { Text("다음 주") })
+
+                Row(Modifier.fillMaxWidth()) {
+                    listOf("일", "월", "화", "수", "목", "금", "토").forEachIndexed { index, label ->
+                        Text(
+                            label,
+                            modifier = Modifier.weight(1f).padding(vertical = 5.dp),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = when (index) {
+                                0 -> MaterialTheme.colorScheme.error
+                                6 -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                }
+
+                cells.chunked(7).forEach { week ->
+                    Row(Modifier.fillMaxWidth()) {
+                        week.forEach { date ->
+                            if (date == null) {
+                                Spacer(Modifier.weight(1f).height(58.dp))
+                            } else {
+                                val holiday = KoreanHolidays.name(date)
+                                val isSunday = date.dayOfWeek.value == 7
+                                val isSaturday = date.dayOfWeek.value == 6
+                                val selected = date == selectedDate
+                                val isToday = date == today
+                                val eventCount = eventsByDate[date.toString()].orEmpty().size
+
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(58.dp)
+                                        .padding(1.dp),
+                                    onClick = { selectedDate = date },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = when {
+                                        selected -> MaterialTheme.colorScheme.primaryContainer
+                                        isToday -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+                                        else -> Color.Transparent
+                                    }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            date.dayOfMonth.toString(),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (selected || isToday) FontWeight.Bold else FontWeight.Medium,
+                                            color = when {
+                                                holiday != null || isSunday -> MaterialTheme.colorScheme.error
+                                                isSaturday -> MaterialTheme.colorScheme.primary
+                                                else -> MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                        if (holiday != null) {
+                                            Text(
+                                                holiday,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        } else if (eventCount > 0) {
+                                            Text(
+                                                "일정 " + eventCount,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
-        Text(
-            "예정 일정",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(7.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    selectedDate.format(fullDateFormatter),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (holidayName != null) {
+                    Text(
+                        holidayName,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            if (selectedEvents.isNotEmpty()) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(
+                        selectedEvents.size.toString() + "개 일정",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
 
-        if (upcoming.isEmpty()) {
+        Spacer(Modifier.height(6.dp))
+
+        if (selectedEvents.isEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
             ) {
                 Column(
-                    modifier = Modifier.padding(vertical = 36.dp, horizontal = 18.dp),
+                    modifier = Modifier.padding(vertical = 22.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("등록된 일정이 없습니다.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "위 입력창에서 첫 일정을 등록해 보세요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (holidayName != null) holidayName else "등록된 일정이 없습니다.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (holidayName != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                     )
+                    if (holidayName == null) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "일정 추가를 눌러 이 날짜에 일정을 등록할 수 있습니다.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
                 contentPadding = PaddingValues(bottom = 12.dp)
             ) {
-                items(upcoming, key = { it.id }) { item ->
-                    val itemDate = runCatching { LocalDate.parse(item.date) }.getOrNull()
-                    val isToday = itemDate == today
-                    val isPast = itemDate?.isBefore(today) == true
-                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                items(selectedEvents, key = { it.id }) { item ->
+                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                modifier = Modifier.size(52.dp),
-                                shape = RoundedCornerShape(15.dp),
-                                color = if (isToday) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                modifier = Modifier.size(38.dp),
+                                shape = RoundedCornerShape(11.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
                             ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        itemDate?.dayOfMonth?.toString() ?: "-",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        if (isToday) "오늘" else (itemDate?.monthValue?.toString()?.plus("월") ?: ""),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(20.dp))
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    item.date + if (isPast) " · 지난 일정" else "",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isPast) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                item.title,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             IconButton(onClick = { vm.deleteCalendar(item.id) }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "일정 삭제", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -1857,6 +1985,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
         }
     }
 }
+
 
 @Composable
 private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {

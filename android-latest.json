@@ -1,7 +1,7 @@
 {
-  "versionCode": 37,
-  "versionName": "0.3.31",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.31/MilseongJeil-v0.3.31.apk",
-  "sha256": "b5cc1cdc7f7c34c2d2ee4036cc3bc422ada50f72ffa2fc32bcc655fb69afe365",
-  "notes": "v0.3.31: 메모 파일/사진 첨부, 음성 입력, 텍스트 공유, 휴지통 복구 및 영구 삭제 기능을 추가했습니다."
+  "versionCode": 38,
+  "versionName": "0.3.32",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.32/MilseongJeil-v0.3.32.apk",
+  "sha256": "41979329b4e4f84ee66e15c1e9f32abf557f879a7eddff72d6b8dc655a4ae626",
+  "notes": "v0.3.32: 메모 알림, 첨부 이미지 미리보기, JSON 백업·복원, 휴지통 30일 자동 정리 기능을 추가했습니다."
 }

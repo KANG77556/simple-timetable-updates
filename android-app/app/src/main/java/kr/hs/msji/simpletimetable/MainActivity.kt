@@ -1255,10 +1255,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             val formatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.KOREA) }
             val rangeFormatter = remember { DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREA) }
             val weekdayLabels = listOf("월", "화", "수", "목", "금")
-            val compactScreen = LocalConfiguration.current.screenWidthDp < 700
-            var weeklyView by remember(selectedGrade, selectedClass) {
-                mutableStateOf(!compactScreen)
-            }
+            val weeklyView = true
             var selectedDayIndex by remember(weekStart) {
                 mutableIntStateOf(
                     weekDates.indexOf(schoolToday()).takeIf { it >= 0 } ?: 0
@@ -1281,26 +1278,6 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                 FilledTonalIconButton(onClick = { vm.moveAllWeek(1) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 주")
                 }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                FilterChip(
-                    selected = !weeklyView,
-                    onClick = { weeklyView = false },
-                    label = { Text("요일별") },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = weeklyView,
-                    onClick = { weeklyView = true },
-                    label = { Text("주간표") },
-                    modifier = Modifier.weight(1f)
-                )
             }
 
             Spacer(Modifier.height(6.dp))
@@ -2636,14 +2613,15 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
 
 private fun timetableSubjectColor(subject: String): Color {
     val palette = listOf(
-        Color(0xFF3A275F),
-        Color(0xFF244D73),
-        Color(0xFF6C3D20),
-        Color(0xFF14613F),
-        Color(0xFF8A2432),
-        Color(0xFF1B6B73),
-        Color(0xFF4F6B27)
+        Color(0xFF315B8A), Color(0xFF7A4330), Color(0xFF3E7048), Color(0xFF5D477F),
+        Color(0xFF8A3D50), Color(0xFF2B7076), Color(0xFF6C5B2F), Color(0xFF4C6285),
+        Color(0xFF7B553B), Color(0xFF47723E), Color(0xFF674B78), Color(0xFF8A4B63),
+        Color(0xFF2F6C5F), Color(0xFF765F35), Color(0xFF405D7A), Color(0xFF80513C),
+        Color(0xFF3D6A59), Color(0xFF594F81), Color(0xFF8B4650), Color(0xFF356D78),
+        Color(0xFF6F6338), Color(0xFF4A5A86), Color(0xFF7F4937), Color(0xFF4B713F)
     )
-    val index = (subject.hashCode() and Int.MAX_VALUE) % palette.size
+    val normalized = subject.trim().lowercase(Locale.KOREA)
+    val hash = normalized.fold(17) { acc, ch -> acc * 31 + ch.code }
+    val index = (hash and Int.MAX_VALUE) % palette.size
     return palette[index]
 }

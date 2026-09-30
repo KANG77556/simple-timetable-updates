@@ -1,7 +1,7 @@
 {
-  "versionCode": 42,
-  "versionName": "0.3.36",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.36/MilseongJeil-v0.3.36.apk",
-  "sha256": "dc8421f4c2b9cc7c59f49e407c15597d213af51af4d67cde1a6be8840cce957d",
-  "notes": "v0.3.36: 홈 화면 위젯을 새 디자인으로 개편했습니다. 오늘 날짜, 현재·다음 수업, 오늘 시간표, 할 일·일정을 한눈에 표시하고 위젯 크기별 표시를 개선했습니다."
+  "versionCode": 43,
+  "versionName": "0.3.37",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.37/MilseongJeil-v0.3.37.apk",
+  "sha256": "e41479dc6e19a9090f05692b5dadbe933545c0427a2f9d4d855e9adccfd28ce9",
+  "notes": "v0.3.37: 삼성 위젯 선택 화면에서 실제 시간표 위젯 미리보기가 보이도록 수정했습니다."
 }

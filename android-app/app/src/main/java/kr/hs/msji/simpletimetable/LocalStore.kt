@@ -61,6 +61,14 @@ class LocalStore(context: Context) {
         prefs.edit().putString("memos", arr.toString()).apply()
     }
 
+    fun exportMemosJson(): String = prefs.getString("memos", "[]") ?: "[]"
+
+    fun importMemosJson(raw: String): List<MemoItem> {
+        JSONArray(raw)
+        prefs.edit().putString("memos", raw).apply()
+        return loadMemos()
+    }
+
     fun loadMemos(): List<MemoItem> = runCatching {
         val arr = JSONArray(prefs.getString("memos", "[]"))
         (0 until arr.length()).map { i ->

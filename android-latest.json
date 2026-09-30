@@ -1,7 +1,7 @@
 {
-  "versionCode": 33,
-  "versionName": "0.3.27",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.27/MilseongJeil-v0.3.27.apk",
-  "sha256": "eae351b98ae43cde2b00aae59322a8fdecb8f1f0c5c784f3f765a197479c14ca",
-  "notes": "v0.3.27: 오늘 화면에 TODO·캘린더·고정 메모 업무 요약 카드와 지연 TODO 표시를 추가하고 각 업무 메뉴로 빠르게 이동할 수 있게 했습니다."
+  "versionCode": 34,
+  "versionName": "0.3.28",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.28/MilseongJeil-v0.3.28.apk",
+  "sha256": "01ba63c52c31b4d06bca736c7cc20b557f77498caec7063f929be100e14e86e7",
+  "notes": "v0.3.28: 전체 시간표는 주간표만 표시하고, 동일 과목은 항상 같은 색상을 사용하도록 과목별 색상 팔레트를 24종으로 확대했습니다."
 }

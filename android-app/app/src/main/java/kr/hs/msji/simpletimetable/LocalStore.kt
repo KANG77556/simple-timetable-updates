@@ -55,6 +55,7 @@ class LocalStore(context: Context) {
                     .put("archived", memo.archived)
                     .put("attachmentUris", attachments)
                     .put("deletedAt", memo.deletedAt)
+                    .put("reminderAt", memo.reminderAt)
             )
         }
         prefs.edit().putString("memos", arr.toString()).apply()
@@ -90,7 +91,8 @@ class LocalStore(context: Context) {
                 priority = o.optInt("priority", 0),
                 archived = o.optBoolean("archived", false),
                 attachmentUris = attachmentUris,
-                deletedAt = o.optLong("deletedAt", 0L)
+                deletedAt = o.optLong("deletedAt", 0L),
+                reminderAt = o.optLong("reminderAt", 0L)
             )
         }
     }.getOrDefault(emptyList())

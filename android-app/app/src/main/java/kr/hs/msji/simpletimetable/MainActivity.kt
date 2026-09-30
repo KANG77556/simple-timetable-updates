@@ -116,17 +116,33 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 title = {
-                    Column {
-                        Text(
-                            "밀성제일고",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            state.profile.displayName.ifBlank { "선생님" } + " · v" + BuildConfig.VERSION_NAME,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (tab == AppTab.ALL) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "밀성제일고",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "v" + BuildConfig.VERSION_NAME,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Column {
+                            Text(
+                                "밀성제일고",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                state.profile.displayName.ifBlank { "선생님" } + " · v" + BuildConfig.VERSION_NAME,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = { UpdateAction() }
@@ -648,6 +664,7 @@ private fun classSortKey(value: String): Triple<Int, Int, String> {
 private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedGrade by remember { mutableIntStateOf(3) }
     var query by remember { mutableStateOf("") }
+    var filtersExpanded by remember { mutableStateOf(false) }
 
     val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
     val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
@@ -676,94 +693,83 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             .padding(horizontal = 12.dp, vertical = 0.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("전체 시간표", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(8.dp))
             Text(
-                "전체 시간표",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                if (classes.isEmpty()) selectedGrade.toString() + "학년 없음"
+                else selectedGrade.toString() + "학년 · " + selectedClass.ifBlank { classes.firstOrNull().orEmpty() },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                if (classes.isEmpty()) "${selectedGrade}학년 시간표 없음"
-                else allTimetableGradeSummary(selectedGrade, classes.size),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(4.dp))
             TextButton(
-                onClick = vm::refreshAll,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("↻", style = MaterialTheme.typography.titleLarge)
+                onClick = { filtersExpanded = !filtersExpanded },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            ) { Text(if (filtersExpanded) "닫기" else "필터") }
+            IconButton(onClick = vm::refreshAll, modifier = Modifier.size(40.dp)) {
+                Text("↻", style = MaterialTheme.typography.titleMedium)
             }
         }
 
-        Spacer(Modifier.height(4.dp))
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            placeholder = { Text("과목·교사·학급·교실 검색") },
-            leadingIcon = {
-                Icon(Icons.Filled.Search, contentDescription = "검색")
-            },
-            trailingIcon = {
-                if (query.isNotBlank()) {
-                    IconButton(onClick = { query = "" }) {
-                        Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
+        if (filtersExpanded) {
+            Spacer(Modifier.height(4.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text("과목·교사·학급·교실 검색") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "검색") },
+                trailingIcon = {
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
+                        }
                     }
-                }
-            },
-            shape = RoundedCornerShape(18.dp)
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
-        ) {
-            Column(Modifier.padding(6.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    (1..3).forEach { grade ->
-                        FilterChip(
-                            selected = selectedGrade == grade,
-                            onClick = { selectedGrade = grade },
-                            label = { Text("${grade}학년") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                if (classes.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        classes.forEach { classCode ->
+                },
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
+            ) {
+                Column(Modifier.padding(4.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                        (1..3).forEach { grade ->
                             FilterChip(
-                                selected = !searching && selectedClass == classCode,
-                                onClick = {
-                                    selectedClass = classCode
-                                    query = ""
-                                },
-                                label = { Text(classCode) }
+                                selected = selectedGrade == grade,
+                                onClick = { selectedGrade = grade },
+                                label = { Text(grade.toString() + "학년") },
+                                modifier = Modifier.weight(1f)
                             )
+                        }
+                    }
+                    if (classes.isNotEmpty()) {
+                        Row(
+                            Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            classes.forEach { classCode ->
+                                FilterChip(
+                                    selected = !searching && selectedClass == classCode,
+                                    onClick = {
+                                        selectedClass = classCode
+                                        query = ""
+                                        filtersExpanded = false
+                                    },
+                                    label = { Text(classCode) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-
         if (searching) {
             Spacer(Modifier.height(10.dp))
 
@@ -906,7 +912,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                FilledTonalIconButton(onClick = { vm.moveAllWeek(-1) }) {
+                FilledTonalIconButton(onClick = { vm.moveAllWeek(-1) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "이전 주")
                 }
                 Text(
@@ -914,7 +920,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                FilledTonalIconButton(onClick = { vm.moveAllWeek(1) }) {
+                FilledTonalIconButton(onClick = { vm.moveAllWeek(1) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 주")
                 }
             }
@@ -1018,11 +1024,11 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Surface(
-                                        modifier = Modifier.size(58.dp),
+                                        modifier = Modifier.size(50.dp),
                                         shape = RoundedCornerShape(16.dp),
                                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.40f)
                                     ) {

@@ -137,6 +137,14 @@ class TimetableWidget : AppWidgetProvider() {
             manager.updateAppWidget(appWidgetId, views)
         }
 
+        private fun formatDurationMinutes(totalMinutes: Long): String {
+            val minutes = totalMinutes.coerceAtLeast(0)
+            if (minutes < 60) return "${minutes}분"
+            val hours = minutes / 60
+            val remain = minutes % 60
+            return if (remain == 0L) "${hours}시간" else "${hours}시간 ${remain}분"
+        }
+
         private fun parseTime(value: String): LocalTime? =
             runCatching { LocalTime.parse(value.take(5)) }.getOrNull()
 

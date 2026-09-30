@@ -52,11 +52,11 @@ class NextClassWidget : AppWidgetProvider() {
                 val time = if (current != null) {
                     val end = parseTime(target.endTime)
                     val remain = end?.let { Duration.between(now, it).toMinutes().coerceAtLeast(0) } ?: 0
-                    "${remain}분 남음"
+                    "${formatDurationMinutes(remain)} 남음"
                 } else {
                     val start = parseTime(target.startTime)
                     val remain = start?.let { Duration.between(now, it).toMinutes().coerceAtLeast(0) } ?: 0
-                    "${remain}분 후 시작"
+                    "${formatDurationMinutes(remain)} 후 시작"
                 }
                 views.setTextViewText(R.id.next_widget_time, time)
             }
@@ -67,6 +67,14 @@ class NextClassWidget : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.next_widget_root, open)
             manager.updateAppWidget(id, views)
+        }
+
+        private fun formatDurationMinutes(totalMinutes: Long): String {
+            val minutes = totalMinutes.coerceAtLeast(0)
+            if (minutes < 60) return "${minutes}분"
+            val hours = minutes / 60
+            val remain = minutes % 60
+            return if (remain == 0L) "${hours}시간" else "${hours}시간 ${remain}분"
         }
 
         private fun parseTime(value: String): LocalTime? = runCatching { LocalTime.parse(value.take(5)) }.getOrNull()

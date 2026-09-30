@@ -37,11 +37,13 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -69,24 +71,61 @@ class MainActivity : ComponentActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
         }
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFF8FC7FF),
+            val prefs = remember { getSharedPreferences("appearance", MODE_PRIVATE) }
+            var themeMode by remember {
+                mutableStateOf(
+                    runCatching { AppThemeMode.valueOf(prefs.getString("theme_mode", AppThemeMode.SYSTEM.name) ?: AppThemeMode.SYSTEM.name) }
+                        .getOrDefault(AppThemeMode.SYSTEM)
+                )
+            }
+            val systemDark = isSystemInDarkTheme()
+            val dark = when (themeMode) {
+                AppThemeMode.DARK -> true
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.SYSTEM -> systemDark
+            }
+            val colors = if (dark) {
+                darkColorScheme(
+                    primary = Color(0xFF77B9FF),
                     onPrimary = Color(0xFF07111D),
-                    primaryContainer = Color(0xFF16283A),
+                    primaryContainer = Color(0xFF163A5A),
                     onPrimaryContainer = Color(0xFFD7EAFF),
                     secondary = Color(0xFFA9C7E8),
                     secondaryContainer = Color(0xFF203040),
-                    background = Color(0xFF0B0D10),
-                    surface = Color(0xFF111419),
-                    surfaceVariant = Color(0xFF181C22),
-                    onSurface = Color(0xFFF4F6F8),
-                    onSurfaceVariant = Color(0xFFB4BBC5),
-                    outline = Color(0xFF2A313A)
+                    background = Color(0xFF071019),
+                    surface = Color(0xFF0D1721),
+                    surfaceVariant = Color(0xFF131E2A),
+                    onSurface = Color(0xFFF4F7FB),
+                    onSurfaceVariant = Color(0xFFB5C0CE),
+                    outline = Color(0xFF2B3B4D)
                 )
-            ) {
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFF1769AA),
+                    onPrimary = Color.White,
+                    primaryContainer = Color(0xFFD5E9FF),
+                    onPrimaryContainer = Color(0xFF001D35),
+                    secondary = Color(0xFF4F6377),
+                    secondaryContainer = Color(0xFFD3E4F5),
+                    background = Color(0xFFF7FAFD),
+                    surface = Color(0xFFFFFFFF),
+                    surfaceVariant = Color(0xFFEAF0F6),
+                    onSurface = Color(0xFF111418),
+                    onSurfaceVariant = Color(0xFF46515C),
+                    outline = Color(0xFFB6C2CE)
+                )
+            }
+
+            MaterialTheme(colorScheme = colors) {
                 val vm: MainViewModel = viewModel()
-                SimpleTimetableApp(vm)
+                SimpleTimetableApp(
+                    vm = vm,
+                    themeMode = themeMode,
+                    onThemeModeChange = { mode ->
+                        themeMode = mode
+                        prefs.edit().putString("theme_mode", mode.name).apply()
+                    }
+                )
             }
         }
     }
@@ -94,6 +133,10 @@ class MainActivity : ComponentActivity() {
 
 enum class AppTab(val label: String) {
     TODAY("오늘"), ALL("전체"), MEMO("메모"), TODO("TODO"), CALENDAR("캘린더"), BROADCAST("방송")
+}
+
+enum class AppThemeMode(val label: String) {
+    SYSTEM("시스템"), LIGHT("라이트"), DARK("다크")
 }
 
 @Composable
@@ -111,10 +154,15 @@ private fun AppTabIcon(tab: AppTab) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleTimetableApp(vm: MainViewModel) {
+fun SimpleTimetableApp(
+    vm: MainViewModel,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit
+) {
     val state by vm.state.collectAsState()
     var tab by remember { mutableStateOf(AppTab.TODAY) }
     var globalSearch by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     if (!state.loggedIn) {
         LoginScreen(state, vm)
@@ -129,43 +177,41 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 title = {
-                    if (tab == AppTab.ALL) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "밀성제일고",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "v" + BuildConfig.VERSION_NAME,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        Column {
-                            Text(
-                                "밀성제일고",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                state.profile.displayName.ifBlank { "선생님" } + " · v" + BuildConfig.VERSION_NAME,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        when {
+                            showSettings -> "설정"
+                            globalSearch -> "통합 검색"
+                            tab == AppTab.TODAY -> "오늘의 시간표"
+                            tab == AppTab.ALL -> "전체 시간표"
+                            tab == AppTab.MEMO -> "메모"
+                            tab == AppTab.TODO -> "TODO"
+                            tab == AppTab.CALENDAR -> "캘린더"
+                            else -> "전자칠판 방송"
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 actions = {
-                    IconButton(onClick = { globalSearch = !globalSearch }) {
+                    IconButton(
+                        onClick = {
+                            showSettings = false
+                            globalSearch = !globalSearch
+                        }
+                    ) {
                         Icon(
                             if (globalSearch) Icons.Filled.Close else Icons.Filled.Search,
                             contentDescription = if (globalSearch) "통합 검색 닫기" else "통합 검색"
                         )
                     }
-                    UpdateAction()
+                    IconButton(
+                        onClick = {
+                            globalSearch = false
+                            showSettings = !showSettings
+                        }
+                    ) {
+                        Icon(Icons.Filled.Settings, contentDescription = "설정")
+                    }
                 }
             )
         },
@@ -176,6 +222,7 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                         selected = tab == item,
                         onClick = {
                             globalSearch = false
+                            showSettings = false
                             tab = item
                             if (item == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
                             if (item == AppTab.BROADCAST && state.classrooms.isEmpty()) vm.loadClassrooms()
@@ -188,7 +235,12 @@ fun SimpleTimetableApp(vm: MainViewModel) {
         }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            if (globalSearch) {
+            if (showSettings) {
+                SettingsScreen(
+                    themeMode = themeMode,
+                    onThemeModeChange = onThemeModeChange
+                )
+            } else if (globalSearch) {
                 GlobalSearchScreen(
                     state = state,
                     onOpen = { target ->
@@ -213,6 +265,102 @@ fun SimpleTimetableApp(vm: MainViewModel) {
             }
             if (state.loading) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 110.dp)
+    ) {
+        Text(
+            "색상 모드",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "앱의 색상 테마를 설정합니다.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(10.dp))
+
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AppThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = themeMode == mode,
+                        onClick = { onThemeModeChange(mode) },
+                        label = { Text(mode.label) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            "업데이트",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(8.dp))
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("업데이트 확인", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "현재 v" + BuildConfig.VERSION_NAME + " · 최신 버전을 확인합니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                UpdateAction()
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            "앱 정보",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(8.dp))
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                Text("밀성제일고 시간표", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "버전 " + BuildConfig.VERSION_NAME,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -585,14 +733,8 @@ private fun TodayScreen(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.End
         ) {
-            Text(
-                if (isToday) "오늘의 시간표" else "시간표",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
-            )
             FilledTonalButton(
                 onClick = vm::goToToday,
                 enabled = !isToday,
@@ -604,7 +746,7 @@ private fun TodayScreen(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1065,8 +1207,6 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("전체 시간표", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.width(8.dp))
             Text(
                 if (classes.isEmpty()) selectedGrade.toString() + "학년 없음"
                 else selectedGrade.toString() + "학년 · " + selectedClass.ifBlank { classes.firstOrNull().orEmpty() },
@@ -1746,14 +1886,12 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("메모", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    "기록·첨부·음성 입력·공유까지 한 곳에서 관리하세요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                "기록·첨부·음성 입력·공유까지 한 곳에서 관리하세요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                 Text(
                     activeMemoCount.toString() + "개",
@@ -2401,14 +2539,12 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("TODO", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    "해야 할 일을 마감일 기준으로 관리하세요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                "해야 할 일을 마감일 기준으로 관리하세요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = if (overdueCount > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
@@ -2609,7 +2745,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("캘린더", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
             TextButton(
                 onClick = {
                     visibleMonth = YearMonth.from(today)
@@ -2882,14 +3018,12 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("전자칠판 방송", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    "교실을 선택해 공지 또는 TTS 음성 방송을 전송합니다.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                "메시지와 TTS 음성 방송을 교실로 보냅니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
             TextButton(onClick = vm::loadClassrooms) { Text("새로고침") }
         }
 

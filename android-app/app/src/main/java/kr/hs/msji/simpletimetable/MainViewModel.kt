@@ -34,7 +34,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loggedIn = store.userId.isNotBlank() && store.sessionCookie.isNotBlank(),
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
-            memos = store.loadMemos(),
+            memos = initialMemos,
             todos = store.loadTodos(),
             calendar = store.loadCalendar(),
             lastLoginId = store.loginId,
@@ -258,6 +258,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
+    }
+
+    fun setMemoReminder(id: Long, triggerAt: Long) {
+        val memo = _state.value.memos.firstOrNull { it.id == id } ?: return
+        if (triggerAt <= System.currentTimeMillis()) return
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(reminderAt = triggerAt, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+        MemoReminderScheduler.schedule(
+            getApplication(),
+            id,
+            triggerAt,
+            memo.title.ifBlank { "메모 알림" },
+            memo.text
+        )
+    }
+
+    fun clearMemoReminder(id: Long) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(reminderAt = 0L, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+        MemoReminderScheduler.cancel(getApplication(), id)
+    }
+
+    fun exportMemosJson(): String = store.exportMemosJson()
+
+    fun importMemosJson(raw: String): Boolean = runCatching {
+        val list = store.importMemosJson(raw)
+        _state.value = _state.value.copy(memos = list)
+        true
+    }.getOrDefault(false)
+
+    fun cleanupExpiredTrash() {
+        val cutoff = System.currentTimeMillis() - trashRetentionMillis
+        val list = _state.value.memos.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
+        if (list.size != _state.value.memos.size) {
+            store.saveMemos(list)
+            _state.value = _state.value.copy(memos = list)
+        }
     }
 
     fun toggleMemoArchive(id: Long) {

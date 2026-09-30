@@ -12,6 +12,8 @@ import org.json.JSONArray
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class TimetableWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -84,7 +86,8 @@ class TimetableWidget : AppWidgetProvider() {
                     val room = next.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
                     "${remain}분 후 시작 · $room"
                 }
-                else -> "SCERP.cloud · ${LocalDate.now()}"
+                rows.isEmpty() -> "등록된 수업이 없습니다."
+                else -> "오늘 일정이 모두 끝났습니다."
             }
 
             val visibleRows = when {
@@ -108,6 +111,7 @@ class TimetableWidget : AppWidgetProvider() {
                 if (todayEvents.isNotEmpty()) add("일정 ${todayEvents.size}개")
             }.joinToString("   ")
 
+            views.setTextViewText(R.id.widget_date, LocalDate.now().format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREA)))
             views.setTextViewText(R.id.widget_status, status)
             views.setTextViewText(R.id.widget_detail, detail)
             views.setTextViewText(R.id.widget_rows, if (timetableText.isBlank()) "등록된 수업이 없습니다." else timetableText)

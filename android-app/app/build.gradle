@@ -17,8 +17,8 @@ android {
         applicationId "kr.hs.msji.milseongjeil.stable"
         minSdk 26
         targetSdk 35
-        versionCode 30
-        versionName "0.3.24"
+        versionCode 31
+        versionName "0.3.25"
     }
 
     signingConfigs {

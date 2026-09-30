@@ -235,6 +235,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(todos = list)
     }
 
+    fun todoToCalendar(id: Long) {
+        val todo = _state.value.todos.firstOrNull { it.id == id } ?: return
+        addCalendar(todo.text, todo.dueDate)
+    }
+
     fun addCalendar(title: String, date: String) {
         if (title.isBlank() || date.isBlank()) return
         val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), title.trim(), date)

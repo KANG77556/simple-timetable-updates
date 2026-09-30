@@ -188,7 +188,11 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                 )
             } else {
                 when (tab) {
-                    AppTab.TODAY -> TodayScreen(state, vm)
+                    AppTab.TODAY -> TodayScreen(
+                        state = state,
+                        vm = vm,
+                        onOpen = { target -> tab = target }
+                    )
                     AppTab.ALL -> AllTimetableScreen(state, vm)
                     AppTab.MEMO -> MemoScreen(state, vm)
                     AppTab.TODO -> TodoScreen(state, vm)
@@ -545,7 +549,11 @@ private val SCHOOL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
 internal fun schoolToday(): LocalDate = LocalDate.now(SCHOOL_ZONE)
 
 @Composable
-private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
+private fun TodayScreen(
+    state: AppUiState,
+    vm: MainViewModel,
+    onOpen: (AppTab) -> Unit
+) {
     val rows = remember(state.myTimetable) { state.myTimetable.sortedBy { it.period } }
     val selectedDate = remember(state.today) {
         runCatching { LocalDate.parse(state.today) }.getOrDefault(schoolToday())
@@ -788,7 +796,79 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
+
+        if (isToday) {
+            val todayKey = actualToday.toString()
+            val activeTodos = state.todos.filterNot { it.done }
+            val overdueTodos = activeTodos.count {
+                runCatching { LocalDate.parse(it.dueDate).isBefore(actualToday) }.getOrDefault(false)
+            }
+            val todayTodos = activeTodos.count { it.dueDate == todayKey }
+            val todayEvents = state.calendar.count { it.date == todayKey }
+            val pinnedMemos = state.memos.count { it.pinned }
+
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "오늘 업무",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (overdueTodos > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.errorContainer
+                            ) {
+                                Text(
+                                    "지연 " + overdueTodos,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(7.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        TodayWorkSummary(
+                            label = "TODO",
+                            value = todayTodos.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onOpen(AppTab.TODO) }
+                        )
+                        TodayWorkSummary(
+                            label = "일정",
+                            value = todayEvents.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onOpen(AppTab.CALENDAR) }
+                        )
+                        TodayWorkSummary(
+                            label = "고정 메모",
+                            value = pinnedMemos.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onOpen(AppTab.MEMO) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+        }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -882,6 +962,39 @@ private fun TodayScreen(state: AppUiState, vm: MainViewModel) {
         if (state.message.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
             Text(state.message, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun TodayWorkSummary(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
         }
     }
 }

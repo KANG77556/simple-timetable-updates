@@ -48,6 +48,9 @@ class LocalStore(context: Context) {
                     .put("category", memo.category)
                     .put("checklist", memo.checklist)
                     .put("checkItems", checks)
+                    .put("title", memo.title)
+                    .put("priority", memo.priority)
+                    .put("archived", memo.archived)
             )
         }
         prefs.edit().putString("memos", arr.toString()).apply()
@@ -73,7 +76,10 @@ class LocalStore(context: Context) {
                 pinned = o.optBoolean("pinned"),
                 category = o.optString("category", "일반"),
                 checklist = o.optBoolean("checklist"),
-                checkItems = checkItems
+                checkItems = checkItems,
+                title = o.optString("title"),
+                priority = o.optInt("priority", 0),
+                archived = o.optBoolean("archived", false)
             )
         }
     }.getOrDefault(emptyList())
@@ -90,11 +96,21 @@ class LocalStore(context: Context) {
         get() = prefs.getBoolean("memo_draft_checklist", false)
         set(value) = prefs.edit().putBoolean("memo_draft_checklist", value).apply()
 
+    var memoDraftTitle: String
+        get() = prefs.getString("memo_draft_title", "") ?: ""
+        set(value) = prefs.edit().putString("memo_draft_title", value).apply()
+
+    var memoDraftPriority: Int
+        get() = prefs.getInt("memo_draft_priority", 0)
+        set(value) = prefs.edit().putInt("memo_draft_priority", value).apply()
+
     fun clearMemoDraft() {
         prefs.edit()
             .remove("memo_draft_text")
             .remove("memo_draft_category")
             .remove("memo_draft_checklist")
+            .remove("memo_draft_title")
+            .remove("memo_draft_priority")
             .apply()
     }
 

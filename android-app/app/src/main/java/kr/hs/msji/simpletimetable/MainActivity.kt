@@ -1723,7 +1723,9 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
+            .padding(bottom = 110.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
@@ -1948,12 +1950,10 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(bottom = 12.dp)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(selectedEvents, key = { it.id }) { item ->
+                selectedEvents.forEach { item ->
                     ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),

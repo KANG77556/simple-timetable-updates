@@ -155,9 +155,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(todos = list)
     }
 
+    fun deleteTodo(id: Long) {
+        val list = _state.value.todos.filterNot { it.id == id }
+        store.saveTodos(list)
+        _state.value = _state.value.copy(todos = list)
+    }
+
     fun addCalendar(title: String, date: String) {
         if (title.isBlank() || date.isBlank()) return
         val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), title.trim(), date)
+        store.saveCalendar(list)
+        _state.value = _state.value.copy(calendar = list)
+    }
+
+    fun deleteCalendar(id: Long) {
+        val list = _state.value.calendar.filterNot { it.id == id }
         store.saveCalendar(list)
         _state.value = _state.value.copy(calendar = list)
     }

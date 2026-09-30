@@ -3,5 +3,5 @@
   "versionName": "0.3.42",
   "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.42/MilseongJeil-v0.3.42.apk",
   "sha256": "dcca97658ca285e594fb61b3a1199c6a1e6c34c09e17f243fd3531640344da22",
-  "notes": "v0.3.42: 위젯의 남은 시간/다음 수업까지 시간을 시·분 형식으로 개선했습니다. 60분=1시간, 61분=1시간 1분으로 표시됩니다."
+  "notes": "v0.3.42: 다음 수업 및 메인 시간표 위젯의 남은 시간을 60분 이상일 때 시간·분 형식으로 표시합니다. 예: 60분=1시간, 61분=1시간 1분."
 }

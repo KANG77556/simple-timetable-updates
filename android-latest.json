@@ -1,7 +1,7 @@
 {
-  "versionCode": 45,
-  "versionName": "0.3.39",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.39/MilseongJeil-v0.3.39.apk",
-  "sha256": "eab8ca45af93affb86ba48ab6f4cc1fb7de2e368abee4e0454ef5ec25952425b",
-  "notes": "v0.3.39: 추가 위젯 3종의 삼성 위젯 선택 화면 미리보기를 실제 위젯 UI로 수정했습니다."
+  "versionCode": 46,
+  "versionName": "0.3.40",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.40/MilseongJeil-v0.3.40.apk",
+  "sha256": "6fecb890553d9bfd2e2684e54c83ec64e4d65ce3e4911be20fc331ba6c2c7dd4",
+  "notes": "v0.3.40: 삼성 위젯 선택 화면에서 일부 위젯에 '위젯을 추가할 수 없습니다'가 표시되는 RemoteViews 호환성 문제를 수정했습니다."
 }

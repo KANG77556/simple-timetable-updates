@@ -1441,7 +1441,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                             Box(
                                 Modifier
                                     .width(54.dp)
-                                    .height(62.dp),
+                                    .height(56.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("교시", fontWeight = FontWeight.Bold)
@@ -1452,7 +1452,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                 Surface(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(62.dp)
+                                        .height(56.dp)
                                         .padding(1.dp),
                                     shape = RoundedCornerShape(10.dp),
                                     color = if (isToday) {
@@ -1493,7 +1493,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(76.dp)
+                                    .height(92.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -1504,7 +1504,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                 ) {
                                     Text(
                                         period.toString(),
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold
                                     )
                                     val representative = selectedRows.firstOrNull { it.period == period }
@@ -1551,23 +1551,32 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                                 verticalArrangement = Arrangement.Center
                                             ) {
                                                 Text(
-                                                    row.subject,
+                                                    row.subject.ifBlank { "과목 미지정" },
                                                     style = MaterialTheme.typography.labelLarge,
                                                     fontWeight = FontWeight.Bold,
-                                                    maxLines = 1,
+                                                    maxLines = 2,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
-                                                val detail = listOf(row.teacher, row.room)
-                                                    .filter { it.isNotBlank() }
-                                                    .joinToString(" · ")
-                                                if (detail.isNotBlank()) {
+
+                                                if (row.teacher.isNotBlank()) {
                                                     Spacer(Modifier.height(2.dp))
                                                     Text(
-                                                        detail,
+                                                        row.teacher,
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        maxLines = 2,
+                                                        maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f)
+                                                    )
+                                                }
+
+                                                if (row.room.isNotBlank()) {
+                                                    Spacer(Modifier.height(1.dp))
+                                                    Text(
+                                                        row.room,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
                                                     )
                                                 }
                                             }

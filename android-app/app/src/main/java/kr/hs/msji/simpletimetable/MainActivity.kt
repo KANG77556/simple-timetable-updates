@@ -103,6 +103,7 @@ private fun AppTabIcon(tab: AppTab) {
 fun SimpleTimetableApp(vm: MainViewModel) {
     val state by vm.state.collectAsState()
     var tab by remember { mutableStateOf(AppTab.TODAY) }
+    var globalSearch by remember { mutableStateOf(false) }
 
     if (!state.loggedIn) {
         LoginScreen(state, vm)
@@ -146,7 +147,15 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                         }
                     }
                 },
-                actions = { UpdateAction() }
+                actions = {
+                    IconButton(onClick = { globalSearch = !globalSearch }) {
+                        Icon(
+                            if (globalSearch) Icons.Filled.Close else Icons.Filled.Search,
+                            contentDescription = if (globalSearch) "통합 검색 닫기" else "통합 검색"
+                        )
+                    }
+                    UpdateAction()
+                }
             )
         },
         bottomBar = {
@@ -155,6 +164,7 @@ fun SimpleTimetableApp(vm: MainViewModel) {
                     NavigationBarItem(
                         selected = tab == item,
                         onClick = {
+                            globalSearch = false
                             tab = item
                             if (item == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
                             if (item == AppTab.BROADCAST && state.classrooms.isEmpty()) vm.loadClassrooms()
@@ -167,16 +177,250 @@ fun SimpleTimetableApp(vm: MainViewModel) {
         }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
-                AppTab.TODAY -> TodayScreen(state, vm)
-                AppTab.ALL -> AllTimetableScreen(state, vm)
-                AppTab.MEMO -> MemoScreen(state, vm)
-                AppTab.TODO -> TodoScreen(state, vm)
-                AppTab.CALENDAR -> CalendarScreen(state, vm)
-                AppTab.BROADCAST -> BroadcastScreen(state, vm)
+            if (globalSearch) {
+                GlobalSearchScreen(
+                    state = state,
+                    onOpen = { target ->
+                        globalSearch = false
+                        tab = target
+                        if (target == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
+                    }
+                )
+            } else {
+                when (tab) {
+                    AppTab.TODAY -> TodayScreen(state, vm)
+                    AppTab.ALL -> AllTimetableScreen(state, vm)
+                    AppTab.MEMO -> MemoScreen(state, vm)
+                    AppTab.TODO -> TodoScreen(state, vm)
+                    AppTab.CALENDAR -> CalendarScreen(state, vm)
+                    AppTab.BROADCAST -> BroadcastScreen(state, vm)
+                }
             }
             if (state.loading) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlobalSearchScreen(
+    state: AppUiState,
+    onOpen: (AppTab) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val needle = query.trim()
+
+    val memoResults = remember(state.memos, needle) {
+        if (needle.isBlank()) emptyList()
+        else state.memos.filter {
+            it.text.contains(needle, ignoreCase = true) ||
+                it.category.contains(needle, ignoreCase = true)
+        }.take(20)
+    }
+    val todoResults = remember(state.todos, needle) {
+        if (needle.isBlank()) emptyList()
+        else state.todos.filter {
+            it.text.contains(needle, ignoreCase = true) ||
+                it.dueDate.contains(needle, ignoreCase = true)
+        }.take(20)
+    }
+    val calendarResults = remember(state.calendar, needle) {
+        if (needle.isBlank()) emptyList()
+        else state.calendar.filter {
+            it.title.contains(needle, ignoreCase = true) ||
+                it.date.contains(needle, ignoreCase = true)
+        }.take(20)
+    }
+    val timetableResults = remember(state.myTimetable, state.allTimetable, needle) {
+        if (needle.isBlank()) emptyList()
+        else (state.myTimetable + state.allTimetable)
+            .distinctBy { listOf(it.date, it.classCode, it.period, it.subject, it.teacher, it.room).joinToString("|") }
+            .filter {
+                it.subject.contains(needle, ignoreCase = true) ||
+                    it.teacher.contains(needle, ignoreCase = true) ||
+                    it.room.contains(needle, ignoreCase = true) ||
+                    it.classCode.contains(needle, ignoreCase = true) ||
+                    it.date.contains(needle, ignoreCase = true)
+            }.take(20)
+    }
+    val total = memoResults.size + todoResults.size + calendarResults.size + timetableResults.size
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("통합 검색", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "시간표·메모·TODO·캘린더를 한 번에 찾습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (needle.isNotBlank()) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(
+                        total.toString() + "건",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = { Text("과목, 교사, 메모, 할 일, 일정 검색") },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
+                    }
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        if (needle.isBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 34.dp, horizontal = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text("검색어를 입력하세요.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "업무 기록과 일정, 시간표를 메뉴 이동 없이 찾을 수 있습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else if (total == 0) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            ) {
+                Text(
+                    "검색 결과가 없습니다.",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(bottom = 14.dp)
+            ) {
+                timetableResults.forEach { row ->
+                    item(key = "t-" + row.date + row.classCode + row.period + row.subject) {
+                        SearchResultCard(
+                            badge = "시간표",
+                            title = row.subject.ifBlank { "과목 미지정" },
+                            detail = listOf(row.date, row.classCode, row.teacher, row.room).filter { it.isNotBlank() }.joinToString(" · "),
+                            onClick = { onOpen(AppTab.ALL) }
+                        )
+                    }
+                }
+                memoResults.forEach { memo ->
+                    item(key = "m-" + memo.id) {
+                        SearchResultCard(
+                            badge = "메모 · " + memo.category,
+                            title = memo.text.lineSequence().firstOrNull().orEmpty(),
+                            detail = if (memo.checklist) "체크리스트" else "메모",
+                            onClick = { onOpen(AppTab.MEMO) }
+                        )
+                    }
+                }
+                todoResults.forEach { todo ->
+                    item(key = "d-" + todo.id) {
+                        SearchResultCard(
+                            badge = if (todo.done) "TODO · 완료" else "TODO",
+                            title = todo.text,
+                            detail = "마감 " + todo.dueDate,
+                            onClick = { onOpen(AppTab.TODO) }
+                        )
+                    }
+                }
+                calendarResults.forEach { event ->
+                    item(key = "c-" + event.id) {
+                        SearchResultCard(
+                            badge = "캘린더",
+                            title = event.title,
+                            detail = event.date,
+                            onClick = { onOpen(AppTab.CALENDAR) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultCard(
+    badge: String,
+    title: String,
+    detail: String,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp)) {
+            Surface(
+                shape = RoundedCornerShape(9.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    badge,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                title.ifBlank { "내용 없음" },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (detail.isNotBlank()) {
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -1772,6 +2016,14 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                            TextButton(
+                                onClick = { vm.todoToCalendar(todo.id) },
+                                enabled = !todo.done
+                            ) {
+                                Icon(Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(3.dp))
+                                Text("일정")
                             }
                             IconButton(onClick = { vm.deleteTodo(todo.id) }) {
                                 Icon(

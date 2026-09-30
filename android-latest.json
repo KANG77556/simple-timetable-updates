@@ -1,7 +1,7 @@
 {
-  "versionCode": 38,
-  "versionName": "0.3.32",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.32/MilseongJeil-v0.3.32.apk",
-  "sha256": "41979329b4e4f84ee66e15c1e9f32abf557f879a7eddff72d6b8dc655a4ae626",
-  "notes": "v0.3.32: 메모 알림, 첨부 이미지 미리보기, JSON 백업·복원, 휴지통 30일 자동 정리 기능을 추가했습니다."
+  "versionCode": 39,
+  "versionName": "0.3.33",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.33/MilseongJeil-v0.3.33.apk",
+  "sha256": "ee7a41b28b81d1c5d853264d560240482f6fd5ee4723bafc175dbda8ab90bc7c",
+  "notes": "v0.3.33: 메모 알림 날짜·시간 직접 지정, 첨부 파일 개별 삭제, 첨부 파일 포함 공유 기능을 추가했습니다."
 }

@@ -2445,8 +2445,11 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             Spacer(Modifier.height(8.dp))
 
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 if (memo.deletedAt > 0L) {
                                     TextButton(onClick = { vm.restoreMemo(memo.id) }) { Text("복원") }
@@ -2488,8 +2491,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     TextButton(onClick = { vm.toggleMemoArchive(memo.id) }) {
                                         Text(if (memo.archived) "복원" else "보관")
                                     }
-                                    Spacer(Modifier.weight(1f))
-                                    TextButton(
+                                     TextButton(
                                         onClick = {
                                             editingId = memo.id
                                             text = memo.text

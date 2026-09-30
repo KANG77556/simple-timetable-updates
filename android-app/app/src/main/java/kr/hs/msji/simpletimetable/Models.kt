@@ -31,7 +31,9 @@ data class MemoItem(
     val checkItems: List<MemoCheckItem> = emptyList(),
     val title: String = "",
     val priority: Int = 0,
-    val archived: Boolean = false
+    val archived: Boolean = false,
+    val attachmentUris: List<String> = emptyList(),
+    val deletedAt: Long = 0L
 )
 data class TodoItem(val id: Long, val text: String, val done: Boolean, val dueDate: String)
 data class CalendarItem(val id: Long, val title: String, val date: String)

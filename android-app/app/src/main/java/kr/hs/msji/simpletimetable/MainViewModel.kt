@@ -125,7 +125,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: String = "일반",
         checklist: Boolean = false,
         title: String = "",
-        priority: Int = 0
+        priority: Int = 0,
+        attachmentUris: List<String> = emptyList()
     ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
@@ -147,7 +148,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             checklist = checklist,
             checkItems = checks,
             title = title.trim(),
-            priority = priority.coerceIn(0, 2)
+            priority = priority.coerceIn(0, 2),
+            attachmentUris = attachmentUris.distinct()
         )
         store.saveMemos(list)
         store.clearMemoDraft()
@@ -160,7 +162,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: String? = null,
         checklist: Boolean? = null,
         title: String? = null,
-        priority: Int? = null
+        priority: Int? = null,
+        attachmentUris: List<String>? = null
     ) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
@@ -182,7 +185,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     checklist = nextChecklist,
                     checkItems = nextChecks,
                     title = title?.trim() ?: memo.title,
-                    priority = priority?.coerceIn(0, 2) ?: memo.priority
+                    priority = priority?.coerceIn(0, 2) ?: memo.priority,
+                    attachmentUris = attachmentUris?.distinct() ?: memo.attachmentUris
                 )
             }
         }
@@ -208,7 +212,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteMemo(id: Long) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(deletedAt = now, pinned = false, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun restoreMemo(id: Long) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map {
+            if (it.id == id) it.copy(deletedAt = 0L, updatedAt = now) else it
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun permanentlyDeleteMemo(id: Long) {
         val list = _state.value.memos.filterNot { it.id == id }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun addMemoAttachments(id: Long, uris: List<String>) {
+        if (uris.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id) memo else memo.copy(
+                attachmentUris = (memo.attachmentUris + uris).distinct(),
+                updatedAt = now
+            )
+        }
+        store.saveMemos(list)
+        _state.value = _state.value.copy(memos = list)
+    }
+
+    fun removeMemoAttachment(id: Long, uri: String) {
+        val now = System.currentTimeMillis()
+        val list = _state.value.memos.map { memo ->
+            if (memo.id != id) memo else memo.copy(
+                attachmentUris = memo.attachmentUris.filterNot { it == uri },
+                updatedAt = now
+            )
+        }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }

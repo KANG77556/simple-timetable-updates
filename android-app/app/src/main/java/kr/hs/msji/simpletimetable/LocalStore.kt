@@ -38,6 +38,8 @@ class LocalStore(context: Context) {
             memo.checkItems.forEach { item ->
                 checks.put(JSONObject().put("text", item.text).put("done", item.done))
             }
+            val attachments = JSONArray()
+            memo.attachmentUris.forEach { attachments.put(it) }
             arr.put(
                 JSONObject()
                     .put("id", memo.id)
@@ -51,6 +53,8 @@ class LocalStore(context: Context) {
                     .put("title", memo.title)
                     .put("priority", memo.priority)
                     .put("archived", memo.archived)
+                    .put("attachmentUris", attachments)
+                    .put("deletedAt", memo.deletedAt)
             )
         }
         prefs.edit().putString("memos", arr.toString()).apply()
@@ -68,6 +72,11 @@ class LocalStore(context: Context) {
                     MemoCheckItem(item.optString("text"), item.optBoolean("done"))
                 }
             }
+            val attachments = o.optJSONArray("attachmentUris")
+            val attachmentUris = if (attachments == null) emptyList() else {
+                (0 until attachments.length()).map { index -> attachments.optString(index) }
+                    .filter { it.isNotBlank() }
+            }
             MemoItem(
                 id = o.getLong("id"),
                 text = o.optString("text"),
@@ -79,7 +88,9 @@ class LocalStore(context: Context) {
                 checkItems = checkItems,
                 title = o.optString("title"),
                 priority = o.optInt("priority", 0),
-                archived = o.optBoolean("archived", false)
+                archived = o.optBoolean("archived", false),
+                attachmentUris = attachmentUris,
+                deletedAt = o.optLong("deletedAt", 0L)
             )
         }
     }.getOrDefault(emptyList())

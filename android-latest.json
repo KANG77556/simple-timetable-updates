@@ -1,7 +1,7 @@
 {
-  "versionCode": 30,
-  "versionName": "0.3.24",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.24/MilseongJeil-v0.3.24.apk",
-  "sha256": "dfc667c68e36e3ab73ea12cfd1299781fe503bff2004be81958ac151b17d727b",
-  "notes": "v0.3.24: 캘린더 화면 전체를 세로 스크롤 가능하게 수정하고 하단 선택 날짜/일정 목록이 네비게이션 바에 가려지지 않도록 보완했습니다."
+  "versionCode": 31,
+  "versionName": "0.3.25",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.25/MilseongJeil-v0.3.25.apk",
+  "sha256": "ca94538f1680f98d974230aee1fcfe4a4f37e065a351a041a8b4fdf1a5ca68e9",
+  "notes": "v0.3.25: 메모 고정, 카테고리, 체크리스트, TODO/캘린더 전환, 자동 임시저장, 학생상담/회의/수업 템플릿, 정렬 기능을 추가했습니다."
 }

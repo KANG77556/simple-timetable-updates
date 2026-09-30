@@ -1,7 +1,7 @@
 {
-  "versionCode": 46,
-  "versionName": "0.3.40",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.40/MilseongJeil-v0.3.40.apk",
-  "sha256": "6fecb890553d9bfd2e2684e54c83ec64e4d65ce3e4911be20fc331ba6c2c7dd4",
-  "notes": "v0.3.40: 삼성 위젯 선택 화면에서 일부 위젯에 '위젯을 추가할 수 없습니다'가 표시되는 RemoteViews 호환성 문제를 수정했습니다."
+  "versionCode": 47,
+  "versionName": "0.3.41",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.41/MilseongJeil-v0.3.41.apk",
+  "sha256": "61b47779765ea9173d25d33df41471b957e347556f73288183534fd9f22d1665",
+  "notes": "v0.3.41: 메모 카드 하단 작업 버튼 영역을 가로 스크롤 가능하게 수정해 삭제 버튼까지 스와이프해 접근할 수 있도록 했습니다."
 }

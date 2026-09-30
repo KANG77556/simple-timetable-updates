@@ -33,8 +33,22 @@ class LocalStore(context: Context) {
 
     fun saveMemos(items: List<MemoItem>) {
         val arr = JSONArray()
-        items.forEach {
-            arr.put(JSONObject().put("id", it.id).put("text", it.text).put("createdAt", it.createdAt))
+        items.forEach { memo ->
+            val checks = JSONArray()
+            memo.checkItems.forEach { item ->
+                checks.put(JSONObject().put("text", item.text).put("done", item.done))
+            }
+            arr.put(
+                JSONObject()
+                    .put("id", memo.id)
+                    .put("text", memo.text)
+                    .put("createdAt", memo.createdAt)
+                    .put("updatedAt", memo.updatedAt)
+                    .put("pinned", memo.pinned)
+                    .put("category", memo.category)
+                    .put("checklist", memo.checklist)
+                    .put("checkItems", checks)
+            )
         }
         prefs.edit().putString("memos", arr.toString()).apply()
     }
@@ -43,9 +57,46 @@ class LocalStore(context: Context) {
         val arr = JSONArray(prefs.getString("memos", "[]"))
         (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
-            MemoItem(o.getLong("id"), o.getString("text"), o.optLong("createdAt"))
+            val createdAt = o.optLong("createdAt")
+            val checks = o.optJSONArray("checkItems")
+            val checkItems = if (checks == null) emptyList() else {
+                (0 until checks.length()).map { index ->
+                    val item = checks.getJSONObject(index)
+                    MemoCheckItem(item.optString("text"), item.optBoolean("done"))
+                }
+            }
+            MemoItem(
+                id = o.getLong("id"),
+                text = o.optString("text"),
+                createdAt = createdAt,
+                updatedAt = o.optLong("updatedAt", createdAt),
+                pinned = o.optBoolean("pinned"),
+                category = o.optString("category", "일반"),
+                checklist = o.optBoolean("checklist"),
+                checkItems = checkItems
+            )
         }
     }.getOrDefault(emptyList())
+
+    var memoDraftText: String
+        get() = prefs.getString("memo_draft_text", "") ?: ""
+        set(value) = prefs.edit().putString("memo_draft_text", value).apply()
+
+    var memoDraftCategory: String
+        get() = prefs.getString("memo_draft_category", "일반") ?: "일반"
+        set(value) = prefs.edit().putString("memo_draft_category", value).apply()
+
+    var memoDraftChecklist: Boolean
+        get() = prefs.getBoolean("memo_draft_checklist", false)
+        set(value) = prefs.edit().putBoolean("memo_draft_checklist", value).apply()
+
+    fun clearMemoDraft() {
+        prefs.edit()
+            .remove("memo_draft_text")
+            .remove("memo_draft_category")
+            .remove("memo_draft_checklist")
+            .apply()
+    }
 
     fun saveTodos(items: List<TodoItem>) {
         val arr = JSONArray()

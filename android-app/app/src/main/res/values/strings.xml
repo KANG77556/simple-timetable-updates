@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">SCERP</string>
-    <string name="widget_description">현재·다음 수업, 오늘 시간표, 할 일과 일정을 한눈에 확인하는 SCERP 위젯</string>
+    <string name="widget_description">현재·다음 수업, 오늘 시간표, 할 일과 일정을 한눈에 확인하는 시간표 위젯</string>
 </resources>

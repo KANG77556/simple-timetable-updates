@@ -1,7 +1,7 @@
 {
-  "versionCode": 51,
-  "versionName": "0.3.45",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.45/MilseongJeil-v0.3.45.apk",
-  "sha256": "a8c6ba2fd9a11456fdca4c80eca9a742efacbbede225050513fcaa471c6439b9",
-  "notes": "v0.3.45: 메모 편집 화면 공간 효율 개선, 700ms 자동저장, 카테고리/블록 메뉴 정리, 단일 + 블록 추가, 링크·이미지·파일 블록 입력 기능을 추가했습니다."
+  "versionCode": 52,
+  "versionName": "0.3.46",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.46/MilseongJeil-v0.3.46.apk",
+  "sha256": "e13794048862bf4e6e68a20b6a8969ea2d2449f3073a946fb0a55e4fc333bd3f",
+  "notes": "v0.3.46: 메모 카드에 수정/삭제 버튼을 상시 표시하고 삭제 확인창을 추가했습니다."
 }

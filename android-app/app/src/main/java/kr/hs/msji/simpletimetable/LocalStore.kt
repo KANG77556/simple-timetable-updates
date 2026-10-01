@@ -166,4 +166,122 @@ class LocalStore(context: Context) {
             CalendarItem(o.getLong("id"), o.getString("title"), o.getString("date"))
         }
     }.getOrDefault(emptyList())
+
+    fun saveNotePages(items: List<NotePage>) {
+        val arr = JSONArray()
+        items.forEach { page ->
+            val tags = JSONArray().also { a -> page.tags.forEach(a::put) }
+            val blocks = JSONArray()
+            page.blocks.sortedBy { it.position }.forEach { block ->
+                blocks.put(
+                    JSONObject()
+                        .put("id", block.id)
+                        .put("type", block.type.wireName)
+                        .put("content", block.content)
+                        .put("checked", block.checked)
+                        .put("position", block.position)
+                )
+            }
+            arr.put(
+                JSONObject()
+                    .put("id", page.id)
+                    .put("title", page.title)
+                    .put("category", page.category)
+                    .put("tags", tags)
+                    .put("pinned", page.pinned)
+                    .put("archived", page.archived)
+                    .put("version", page.version)
+                    .put("createdAt", page.createdAt)
+                    .put("updatedAt", page.updatedAt)
+                    .put("syncState", page.syncState)
+                    .put("blocks", blocks)
+            )
+        }
+        prefs.edit().putString("note_pages_v1", arr.toString()).apply()
+    }
+
+    fun loadNotePages(): List<NotePage> {
+        val stored = runCatching {
+            val arr = JSONArray(prefs.getString("note_pages_v1", "[]"))
+            (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                val tagsJson = o.optJSONArray("tags") ?: JSONArray()
+                val blocksJson = o.optJSONArray("blocks") ?: JSONArray()
+                NotePage(
+                    id = o.optString("id"),
+                    title = o.optString("title"),
+                    category = o.optString("category", "개인"),
+                    tags = (0 until tagsJson.length()).map { j -> tagsJson.optString(j) }.filter { it.isNotBlank() },
+                    pinned = o.optBoolean("pinned"),
+                    archived = o.optBoolean("archived"),
+                    version = o.optLong("version", 0),
+                    createdAt = o.optString("createdAt"),
+                    updatedAt = o.optString("updatedAt"),
+                    syncState = o.optString("syncState", "LOCAL"),
+                    blocks = (0 until blocksJson.length()).map { j ->
+                        val b = blocksJson.getJSONObject(j)
+                        NoteBlock(
+                            id = b.optString("id"),
+                            type = NoteBlockType.fromWire(b.optString("type", "text")),
+                            content = b.optString("content"),
+                            checked = b.optBoolean("checked"),
+                            position = b.optInt("position", j)
+                        )
+                    }
+                )
+            }
+        }.getOrDefault(emptyList())
+        if (stored.isNotEmpty()) return stored
+
+        val legacy = loadMemos().filter { it.deletedAt == 0L }
+        if (legacy.isEmpty()) return emptyList()
+
+        val migrated = legacy.map { memo ->
+            val mainBlocks = if (memo.checklist && memo.checkItems.isNotEmpty()) {
+                memo.checkItems.mapIndexed { index, item ->
+                    NoteBlock(
+                        id = java.util.UUID.randomUUID().toString(),
+                        type = NoteBlockType.TODO,
+                        content = item.text,
+                        checked = item.done,
+                        position = index
+                    )
+                }
+            } else {
+                listOf(
+                    NoteBlock(
+                        id = java.util.UUID.randomUUID().toString(),
+                        type = NoteBlockType.TEXT,
+                        content = memo.text,
+                        position = 0
+                    )
+                )
+            }
+            val fileBlocks = memo.attachmentUris.mapIndexed { offset, uri ->
+                NoteBlock(
+                    id = java.util.UUID.randomUUID().toString(),
+                    type = NoteBlockType.FILE,
+                    content = uri,
+                    position = mainBlocks.size + offset
+                )
+            }
+            NotePage(
+                id = java.util.UUID.randomUUID().toString(),
+                title = memo.title.ifBlank {
+                    memo.text.lineSequence().firstOrNull()?.take(60).orEmpty().ifBlank { "메모" }
+                },
+                category = memo.category.ifBlank { "개인" },
+                pinned = memo.pinned,
+                archived = memo.archived,
+                version = 0,
+                createdAt = java.time.Instant.ofEpochMilli(memo.createdAt).toString(),
+                updatedAt = java.time.Instant.ofEpochMilli(memo.updatedAt).toString(),
+                blocks = mainBlocks + fileBlocks,
+                syncState = "LOCAL"
+            )
+        }
+        saveNotePages(migrated)
+        return migrated
+    }
+
 }

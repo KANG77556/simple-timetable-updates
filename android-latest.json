@@ -1,7 +1,7 @@
-{
-  "versionCode": 53,
-  "versionName": "0.3.47",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.47/MilseongJeil-v0.3.47.apk",
-  "sha256": "5c2da0e9a240e2ffa530a40dbf090e23433a5e234ac7814b4ca2bc05c762b5b2",
-  "notes": "v0.3.47: 홈 위젯의 수업 시작/종료 남은 시간을 실시간 카운트다운으로 표시하고, 수업 경계 시점에 위젯 상태를 자동 갱신합니다."
+﻿{
+    "versionCode":  54,
+    "versionName":  "0.3.48",
+    "apkUrl":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.48/MilseongJeil-v0.3.48.apk",
+    "sha256":  "36fce247cdc72cdfcdbb4a2a2a5a459dc82ff40d73206c1b3e0e695862d854e2",
+    "notes":  "v0.3.48: 메모 삭제 즉시 반영, 삭제 메모 재등장 방지, 메모 재마이그레이션 방지, 동기화 상태 표시 개선."
 }

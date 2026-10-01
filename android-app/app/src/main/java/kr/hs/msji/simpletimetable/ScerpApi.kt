@@ -216,4 +216,93 @@ class ScerpApi(private val store: LocalStore? = null) {
         val data = request("/api/eboard-center/send", "POST", payload).optJSONObject("data")
         return data?.optString("messageId", data.optString("broadcastId")) ?: "전송 완료"
     }
+
+    fun fetchNotePages(): List<NotePage> {
+        val data = request("/api/notes").optJSONObject("data") ?: JSONObject()
+        val pages = data.optJSONArray("pages") ?: JSONArray()
+        return (0 until pages.length()).mapNotNull { i ->
+            val p = pages.optJSONObject(i) ?: return@mapNotNull null
+            NotePage(
+                id = p.optString("id"),
+                title = p.optString("title"),
+                category = p.optString("category", "개인"),
+                tags = p.optJSONArray("tags")?.let { arr ->
+                    (0 until arr.length()).map { j -> arr.optString(j) }
+                } ?: emptyList(),
+                pinned = p.optBoolean("pinned"),
+                archived = p.optBoolean("archived"),
+                version = p.optLong("version", 1),
+                createdAt = p.optString("createdAt"),
+                updatedAt = p.optString("updatedAt"),
+                blocks = emptyList(),
+                syncState = "SYNCED"
+            )
+        }
+    }
+
+    fun fetchNote(id: String): NotePage {
+        val data = request("/api/notes?id=${URLEncoder.encode(id, "UTF-8")}").optJSONObject("data") ?: JSONObject()
+        val p = data.optJSONObject("page") ?: throw IllegalStateException("메모를 찾을 수 없습니다.")
+        val blocks = data.optJSONArray("blocks") ?: JSONArray()
+        return NotePage(
+            id = p.optString("id"),
+            title = p.optString("title"),
+            category = p.optString("category", "개인"),
+            tags = p.optJSONArray("tags")?.let { arr ->
+                (0 until arr.length()).map { j -> arr.optString(j) }
+            } ?: emptyList(),
+            pinned = p.optBoolean("pinned"),
+            archived = p.optBoolean("archived"),
+            version = p.optLong("version", 1),
+            createdAt = p.optString("createdAt"),
+            updatedAt = p.optString("updatedAt"),
+            blocks = (0 until blocks.length()).mapNotNull { i ->
+                val b = blocks.optJSONObject(i) ?: return@mapNotNull null
+                NoteBlock(
+                    id = b.optString("id"),
+                    type = NoteBlockType.fromWire(b.optString("type")),
+                    content = b.optString("content"),
+                    checked = b.optBoolean("checked"),
+                    position = b.optInt("position", i)
+                )
+            },
+            syncState = "SYNCED"
+        )
+    }
+
+    fun saveNote(page: NotePage): NotePage {
+        val blocks = JSONArray()
+        page.blocks.sortedBy { it.position }.forEach { b ->
+            blocks.put(
+                JSONObject()
+                    .put("id", b.id)
+                    .put("type", b.type.wireName)
+                    .put("content", b.content)
+                    .put("checked", b.checked)
+                    .put("position", b.position)
+            )
+        }
+        val payload = JSONObject()
+            .put("id", page.id)
+            .put("title", page.title)
+            .put("category", page.category)
+            .put("tags", JSONArray(page.tags))
+            .put("pinned", page.pinned)
+            .put("archived", page.archived)
+            .put("version", if (page.version <= 0) JSONObject.NULL else page.version)
+            .put("blocks", blocks)
+
+        val data = request("/api/notes", "PUT", payload).optJSONObject("data") ?: JSONObject()
+        return page.copy(
+            id = data.optString("id", page.id),
+            version = data.optLong("version", page.version.coerceAtLeast(1)),
+            updatedAt = data.optString("updatedAt", page.updatedAt),
+            syncState = "SYNCED"
+        )
+    }
+
+    fun archiveNote(id: String) {
+        request("/api/notes?id=${URLEncoder.encode(id, "UTF-8")}", "DELETE")
+    }
+
 }

@@ -1,7 +1,7 @@
 {
-  "versionCode": 50,
-  "versionName": "0.3.44",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.44/MilseongJeil-v0.3.44.apk",
-  "sha256": "c37fb9708a654c1c84458849549632ce14c25a116ab707da72dc67de90a8a2c7",
-  "notes": "v0.3.44: 노션형 페이지/블록 메모, 기존 메모 자동 변환, SCERP PC/웹/Android 메모 동기화 기능을 추가했습니다."
+  "versionCode": 51,
+  "versionName": "0.3.45",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.45/MilseongJeil-v0.3.45.apk",
+  "sha256": "a8c6ba2fd9a11456fdca4c80eca9a742efacbbede225050513fcaa471c6439b9",
+  "notes": "v0.3.45: 메모 편집 화면 공간 효율 개선, 700ms 자동저장, 카테고리/블록 메뉴 정리, 단일 + 블록 추가, 링크·이미지·파일 블록 입력 기능을 추가했습니다."
 }

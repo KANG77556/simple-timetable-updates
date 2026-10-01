@@ -39,3 +39,36 @@ data class MemoItem(
 data class TodoItem(val id: Long, val text: String, val done: Boolean, val dueDate: String)
 data class CalendarItem(val id: Long, val title: String, val date: String)
 data class Classroom(val id: String, val name: String, val onlineCount: Int = 0)
+
+
+enum class NoteBlockType(val wireName: String) {
+    TEXT("text"), HEADING1("heading1"), HEADING2("heading2"), BULLET("bullet"), NUMBER("number"),
+    TODO("todo"), QUOTE("quote"), DIVIDER("divider"), CODE("code"), LINK("link"), IMAGE("image"), FILE("file");
+
+    companion object {
+        fun fromWire(value: String): NoteBlockType =
+            entries.firstOrNull { it.wireName == value } ?: TEXT
+    }
+}
+
+data class NoteBlock(
+    val id: String,
+    val type: NoteBlockType = NoteBlockType.TEXT,
+    val content: String = "",
+    val checked: Boolean = false,
+    val position: Int = 0
+)
+
+data class NotePage(
+    val id: String,
+    val title: String,
+    val category: String = "개인",
+    val tags: List<String> = emptyList(),
+    val pinned: Boolean = false,
+    val archived: Boolean = false,
+    val version: Long = 0,
+    val createdAt: String = "",
+    val updatedAt: String = "",
+    val blocks: List<NoteBlock> = emptyList(),
+    val syncState: String = "LOCAL"
+)

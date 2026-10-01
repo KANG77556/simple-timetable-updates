@@ -134,9 +134,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val local = store.loadNotePages()
             val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
             val remote = api.fetchNotePages()
+            val deletedIds = store.deletedNoteIds()
             val uploadedById = uploaded.associateBy { it.id }
-            val merged = remote.map { summary -> uploadedById[summary.id] ?: summary }
-                .plus(uploaded.filter { saved -> remote.none { it.id == saved.id } })
+            val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
+                .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
                 .distinctBy { it.id }
                 .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
             store.saveNotePages(merged)
@@ -166,14 +167,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             store.saveNotePages(next)
             _state.value = _state.value.copy(notePages = next)
         }
+        if (_state.value.message.isNotBlank()) {
+            val failed = _state.value.notePages.map {
+                if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
+            }
+            store.saveNotePages(failed)
+            _state.value = _state.value.copy(notePages = failed)
+        }
     }
 
     fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        val next = _state.value.notePages.filterNot { it.id == id }
+        store.markNoteDeleted(id)
+        store.saveNotePages(next)
+        _state.value = _state.value.copy(notePages = next)
         runTask {
             api.archiveNote(id)
-            val next = _state.value.notePages.filterNot { it.id == id }
-            store.saveNotePages(next)
-            _state.value = _state.value.copy(notePages = next)
         }
     }
     fun addMemo(

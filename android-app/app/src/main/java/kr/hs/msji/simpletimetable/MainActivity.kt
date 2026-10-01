@@ -1846,7 +1846,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     )
                 }
                 TextButton(onClick = { vm.refreshNotes() }, enabled = state.loggedIn) { Text("동기화") }
-                FilledTonalButton(onClick = {
+                FilledTonalButton(
+                    enabled = !state.loading,
+                    onClick = {
                     val now = java.time.Instant.now().toString()
                     val page = NotePage(
                         id = java.util.UUID.randomUUID().toString(),
@@ -1866,7 +1868,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     )
                     vm.saveNotePage(page)
                     selectedId = page.id
-                }) { Text("＋ 새 페이지") }
+                }) { Text(if (state.loading) "처리 중…" else "＋ 새 페이지") }
             }
 
             OutlinedTextField(
@@ -1918,7 +1920,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+                    contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp)
                 ) {
                     items(pages, key = { it.id }) { page ->
                         ElevatedCard(
@@ -1948,7 +1950,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     Text(
                                         when (page.syncState) {
                                             "SYNCED" -> "동기화됨 ✓"
-                                            "PENDING" -> "동기화 중…"
+                                            "PENDING" -> if (state.loading) "동기화 중…" else "동기화 대기"
+                                            "FAILED" -> "동기화 실패"
                                             else -> if (state.loggedIn) "로컬" else "오프라인"
                                         },
                                         style = MaterialTheme.typography.labelSmall,

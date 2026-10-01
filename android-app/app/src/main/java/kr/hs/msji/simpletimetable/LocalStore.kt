@@ -197,7 +197,17 @@ class LocalStore(context: Context) {
                     .put("blocks", blocks)
             )
         }
-        prefs.edit().putString("note_pages_v1", arr.toString()).apply()
+        prefs.edit()
+            .putString("note_pages_v1", arr.toString())
+            .putBoolean("note_pages_initialized_v1", true)
+            .apply()
+    }
+
+    fun deletedNoteIds(): Set<String> = prefs.getStringSet("deleted_note_ids_v1", emptySet())?.toSet() ?: emptySet()
+
+    fun markNoteDeleted(id: String) {
+        if (id.isBlank()) return
+        prefs.edit().putStringSet("deleted_note_ids_v1", deletedNoteIds() + id).apply()
     }
 
     fun loadNotePages(): List<NotePage> {
@@ -232,6 +242,7 @@ class LocalStore(context: Context) {
             }
         }.getOrDefault(emptyList())
         if (stored.isNotEmpty()) return stored
+        if (prefs.getBoolean("note_pages_initialized_v1", false)) return emptyList()
 
         val legacy = loadMemos().filter { it.deletedAt == 0L && !it.archived }
         if (legacy.isEmpty()) return emptyList()

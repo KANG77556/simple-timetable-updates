@@ -1967,11 +1967,49 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     )
                                     Spacer(Modifier.height(6.dp))
                                 }
-                                Text(
-                                    page.category.ifBlank { "개인" },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        page.category.ifBlank { "개인" },
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    TextButton(
+                                        onClick = {
+                                            selectedId = page.id
+                                            if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
+                                                vm.openNotePage(page.id)
+                                            }
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                                    ) { Text("수정") }
+
+                                    var confirmDelete by remember(page.id) { mutableStateOf(false) }
+                                    TextButton(
+                                        onClick = { confirmDelete = true },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                                    ) { Text("삭제", color = MaterialTheme.colorScheme.error) }
+
+                                    if (confirmDelete) {
+                                        AlertDialog(
+                                            onDismissRequest = { confirmDelete = false },
+                                            title = { Text("메모 삭제") },
+                                            text = { Text("이 페이지를 삭제할까요?") },
+                                            confirmButton = {
+                                                TextButton(onClick = {
+                                                    confirmDelete = false
+                                                    vm.archiveNotePage(page.id)
+                                                }) { Text("삭제", color = MaterialTheme.colorScheme.error) }
+                                            },
+                                            dismissButton = {
+                                                TextButton(onClick = { confirmDelete = false }) { Text("취소") }
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -2390,7 +2428,7 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                         enabled = text.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("추가")
+                        Text("추��")
                     }
                 }
                 Spacer(Modifier.height(6.dp))

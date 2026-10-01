@@ -1923,97 +1923,70 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp)
                 ) {
                     items(pages, key = { it.id }) { page ->
-                        ElevatedCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                selectedId = page.id
-                                if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
-                                    vm.openNotePage(page.id)
-                                }
-                            },
-                            shape = RoundedCornerShape(18.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
                         ) {
-                            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (page.pinned) {
-                                        Text("고정", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                        Spacer(Modifier.width(8.dp))
+                            TextButton(
+                                onClick = {
+                                    selectedId = page.id
+                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
+                                        vm.openNotePage(page.id)
                                     }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (page.pinned) {
+                                            Text("★", color = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(6.dp))
+                                        }
+                                        Text(
+                                            page.title.ifBlank { "제목 없음" },
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                                    if (preview.isNotBlank()) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            preview,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
-                                        page.title.ifBlank { "제목 없음" },
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        when (page.syncState) {
-                                            "SYNCED" -> "동기화됨 ✓"
+                                        page.category.ifBlank { "개인" } + " · " + when (page.syncState) {
+                                            "SYNCED" -> "동기화됨"
                                             "PENDING" -> if (state.loading) "동기화 중…" else "동기화 대기"
                                             "FAILED" -> "동기화 실패"
                                             else -> if (state.loggedIn) "로컬" else "오프라인"
                                         },
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (page.syncState == "SYNCED") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (page.syncState == "SYNCED") MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Spacer(Modifier.height(5.dp))
-                                val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
-                                if (preview.isNotBlank()) {
-                                    Text(
-                                        preview,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        page.category.ifBlank { "개인" },
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    TextButton(
-                                        onClick = {
-                                            selectedId = page.id
-                                            if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
-                                                vm.openNotePage(page.id)
-                                            }
-                                        },
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-                                    ) { Text("수정") }
-
-                                    var confirmDelete by remember(page.id) { mutableStateOf(false) }
-                                    TextButton(
-                                        onClick = { confirmDelete = true },
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-                                    ) { Text("삭제", color = MaterialTheme.colorScheme.error) }
-
-                                    if (confirmDelete) {
-                                        AlertDialog(
-                                            onDismissRequest = { confirmDelete = false },
-                                            title = { Text("메모 삭제") },
-                                            text = { Text("이 페이지를 삭제할까요?") },
-                                            confirmButton = {
-                                                TextButton(onClick = {
-                                                    confirmDelete = false
-                                                    vm.archiveNotePage(page.id)
-                                                }) { Text("삭제", color = MaterialTheme.colorScheme.error) }
-                                            },
-                                            dismissButton = {
-                                                TextButton(onClick = { confirmDelete = false }) { Text("취소") }
-                                            }
-                                        )
-                                    }
-                                }
+                                Text(
+                                    "›",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                         }
                     }
                 }
@@ -2213,31 +2186,16 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 )
                             }
 
-                            Text(
-                                when (block.type) {
-                                    NoteBlockType.HEADING1 -> "제목"
-                                    NoteBlockType.HEADING2 -> "소제목"
-                                    NoteBlockType.TODO -> "체크"
-                                    NoteBlockType.BULLET -> "목록"
-                                    NoteBlockType.NUMBER -> "번호"
-                                    NoteBlockType.QUOTE -> "인용"
-                                    NoteBlockType.CODE -> "코드"
-                                    NoteBlockType.LINK -> "링크"
-                                    NoteBlockType.IMAGE -> "이미지"
-                                    NoteBlockType.FILE -> "파일"
-                                    NoteBlockType.DIVIDER -> "구분선"
-                                    else -> "텍스트"
-                                },
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                            )
-
                             Box {
                                 TextButton(
                                     onClick = { blockMenuExpanded = true },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                ) { Text("⋮") }
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        "⋮⋮",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
 
                                 DropdownMenu(
                                     expanded = blockMenuExpanded,

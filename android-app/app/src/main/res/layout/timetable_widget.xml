@@ -73,15 +73,25 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
+        <Chronometer
+            android:id="@+id/widget_countdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="#AFC0D3"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
         <TextView
             android:id="@+id/widget_detail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="1dp"
             android:text="오늘 일정이 모두 끝났습니다."
             android:textColor="#AFC0D3"
-            android:textSize="12sp"
-            android:maxLines="2"
+            android:textSize="11sp"
+            android:maxLines="1"
             android:ellipsize="end" />
     </LinearLayout>
 

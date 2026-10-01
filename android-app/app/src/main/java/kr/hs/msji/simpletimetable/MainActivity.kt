@@ -172,6 +172,13 @@ fun SimpleTimetableApp(
         return
     }
 
+    LaunchedEffect(state.loggedIn) {
+        kotlinx.coroutines.delay(150)
+        vm.preloadAllIfNeeded()
+        kotlinx.coroutines.delay(100)
+        vm.preloadClassroomsIfNeeded()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -227,8 +234,6 @@ fun SimpleTimetableApp(
                             globalSearch = false
                             showSettings = false
                             tab = item
-                            if (item == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
-                            if (item == AppTab.BROADCAST && state.classrooms.isEmpty()) vm.loadClassrooms()
                         },
                         icon = { AppTabIcon(item) },
                         label = { Text(item.label) }
@@ -249,7 +254,6 @@ fun SimpleTimetableApp(
                     onOpen = { target ->
                         globalSearch = false
                         tab = target
-                        if (target == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
                     }
                 )
             } else {

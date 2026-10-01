@@ -1,7 +1,7 @@
 {
-    "versionCode":  54,
-    "versionName":  "0.3.48",
-    "apkUrl":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.48/MilseongJeil-v0.3.48.apk",
-    "sha256":  "36fce247cdc72cdfcdbb4a2a2a5a459dc82ff40d73206c1b3e0e695862d854e2",
-    "notes":  "v0.3.48: 메모 삭제 즉시 반영, 삭제 메모 재등장 방지, 메모 재마이그레이션 방지, 동기화 상태 표시 개선."
+    "versionCode":  55,
+    "versionName":  "0.3.49",
+    "apkUrl":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.49/MilseongJeil-v0.3.49.apk",
+    "sha256":  "b9130baa15fe30db68917c27edd95ca8abb480ba95d1a7eeddfae5b44023c756",
+    "notes":  "v0.3.49: 메모 편집 화면을 노션 스타일 문서형 UI로 개편했습니다. 제목·본문 블록 테두리를 제거하고, 속성 행·목록/번호/인용 접두어·블록 추가 메뉴를 간결하게 정리했습니다."
 }

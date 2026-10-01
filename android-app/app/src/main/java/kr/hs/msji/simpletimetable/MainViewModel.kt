@@ -409,10 +409,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun memoDraftPriority(): Int = store.memoDraftPriority
 
     fun addTodo(text: String, dueDate: String) {
-        if (text.isBlank()) return
-        val list = _state.value.todos + TodoItem(System.currentTimeMillis(), text.trim(), false, dueDate)
+        val normalized = text.trim()
+        if (normalized.isBlank()) return
+        if (_state.value.todos.any { it.text == normalized && it.dueDate == dueDate }) return
+        val list = _state.value.todos + TodoItem(System.currentTimeMillis(), normalized, false, dueDate)
         store.saveTodos(list)
         _state.value = _state.value.copy(todos = list)
+    }
+
+    fun noteBlockToTodo(content: String, dueDate: String) {
+        addTodo(content, dueDate)
     }
 
     fun toggleTodo(id: Long) {
@@ -433,10 +439,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addCalendar(title: String, date: String) {
-        if (title.isBlank() || date.isBlank()) return
-        val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), title.trim(), date)
+        val normalized = title.trim()
+        if (normalized.isBlank() || date.isBlank()) return
+        if (_state.value.calendar.any { it.title == normalized && it.date == date }) return
+        val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), normalized, date)
         store.saveCalendar(list)
         _state.value = _state.value.copy(calendar = list)
+    }
+
+    fun noteBlockToCalendar(content: String, date: String) {
+        addCalendar(content.lineSequence().firstOrNull().orEmpty().ifBlank { content }, date)
     }
 
     fun deleteCalendar(id: Long) {

@@ -2172,84 +2172,105 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     shape = RoundedCornerShape(0.dp),
                     color = Color.Transparent
                 ) {
-                    Column(Modifier.padding(horizontal = 2.dp, vertical = 2.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (block.type == NoteBlockType.TODO) {
-                                Checkbox(
-                                    checked = block.checked,
-                                    onCheckedChange = { checked ->
-                                        blocks = blocks.map {
-                                            if (it.id == block.id) it.copy(checked = checked) else it
-                                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box {
+                            TextButton(
+                                onClick = { blockMenuExpanded = true },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    "⋮⋮",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = blockMenuExpanded,
+                                onDismissRequest = { blockMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("위로 이동") },
+                                    enabled = index > 0,
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val item = m.removeAt(index)
+                                        m.add(index - 1, item)
+                                        blocks = m
                                         dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("아래로 이동") },
+                                    enabled = index >= 0 && index < blocks.lastIndex,
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val item = m.removeAt(index)
+                                        m.add(index + 1, item)
+                                        blocks = m
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("복제") },
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val copy = block.copy(id = java.util.UUID.randomUUID().toString())
+                                        m.add(index + 1, copy)
+                                        blocks = m
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                if (block.content.isNotBlank()) {
+                                    DropdownMenuItem(
+                                        text = { Text("TODO로 보내기") },
+                                        onClick = {
+                                            vm.noteBlockToTodo(block.content, schoolToday().toString())
+                                            blockMenuExpanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("캘린더로 보내기") },
+                                        onClick = {
+                                            vm.noteBlockToCalendar(block.content, schoolToday().toString())
+                                            blockMenuExpanded = false
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("삭제") },
+                                    onClick = {
+                                        blocks = blocks.filterNot { it.id == block.id }
+                                        dirty = true
+                                        blockMenuExpanded = false
                                     }
                                 )
                             }
+                        }
 
-                            Box {
-                                TextButton(
-                                    onClick = { blockMenuExpanded = true },
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        "⋮⋮",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = blockMenuExpanded,
-                                    onDismissRequest = { blockMenuExpanded = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("위로 이동") },
-                                        enabled = index > 0,
-                                        onClick = {
-                                            val m = blocks.toMutableList()
-                                            val item = m.removeAt(index)
-                                            m.add(index - 1, item)
-                                            blocks = m
-                                            dirty = true
-                                            blockMenuExpanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("아래로 이동") },
-                                        enabled = index >= 0 && index < blocks.lastIndex,
-                                        onClick = {
-                                            val m = blocks.toMutableList()
-                                            val item = m.removeAt(index)
-                                            m.add(index + 1, item)
-                                            blocks = m
-                                            dirty = true
-                                            blockMenuExpanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("복제") },
-                                        onClick = {
-                                            val m = blocks.toMutableList()
-                                            val copy = block.copy(id = java.util.UUID.randomUUID().toString())
-                                            m.add(index + 1, copy)
-                                            blocks = m
-                                            dirty = true
-                                            blockMenuExpanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("삭제") },
-                                        onClick = {
-                                            blocks = blocks.filterNot { it.id == block.id }
-                                            dirty = true
-                                            blockMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
+                        if (block.type == NoteBlockType.TODO) {
+                            Checkbox(
+                                checked = block.checked,
+                                onCheckedChange = { checked ->
+                                    blocks = blocks.map {
+                                        if (it.id == block.id) it.copy(checked = checked) else it
+                                    }
+                                    dirty = true
+                                },
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
 
                         if (block.type == NoteBlockType.DIVIDER) {
-                            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(top = 22.dp, end = 8.dp)
+                            )
                         } else {
                             val hint = when (block.type) {
                                 NoteBlockType.LINK -> "https://..."
@@ -2258,59 +2279,80 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 NoteBlockType.QUOTE -> "인용문"
                                 NoteBlockType.CODE -> "코드"
                                 NoteBlockType.TODO -> "할 일"
-                                else -> "내용을 입력하세요"
+                                else -> "내용을 입력하거나 / 를 눌러 명령"
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                val prefix = when (block.type) {
-                                    NoteBlockType.BULLET -> "•"
-                                    NoteBlockType.NUMBER -> "${index + 1}."
-                                    NoteBlockType.QUOTE -> "│"
-                                    else -> ""
-                                }
-                                if (prefix.isNotBlank()) {
-                                    Text(
-                                        prefix,
-                                        modifier = Modifier.padding(top = 14.dp, end = 6.dp),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                TextField(
-                                    value = block.content,
-                                    onValueChange = { value ->
-                                        blocks = blocks.map {
-                                            if (it.id == block.id) it.copy(content = value) else it
-                                        }
-                                        dirty = true
-                                    },
-                                    placeholder = {
-                                        Text(
-                                            hint,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        )
-                                    },
-                                    minLines = 1,
-                                    textStyle = when (block.type) {
-                                        NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                                        NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                                        NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
-                                        else -> MaterialTheme.typography.bodyLarge
-                                    },
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.Transparent,
-                                        unfocusedContainerColor = Color.Transparent,
-                                        disabledContainerColor = Color.Transparent,
-                                        focusedIndicatorColor = Color.Transparent,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                        disabledIndicatorColor = Color.Transparent
-                                    ),
-                                    modifier = Modifier.weight(1f)
+                            val prefix = when (block.type) {
+                                NoteBlockType.BULLET -> "•"
+                                NoteBlockType.NUMBER -> "${index + 1}."
+                                NoteBlockType.QUOTE -> "│"
+                                else -> ""
+                            }
+                            if (prefix.isNotBlank()) {
+                                Text(
+                                    prefix,
+                                    modifier = Modifier.padding(top = 14.dp, end = 4.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            TextField(
+                                value = block.content,
+                                onValueChange = { value ->
+                                    when {
+                                        value == "/" -> {
+                                            blocks = blocks.map {
+                                                if (it.id == block.id) it.copy(content = "") else it
+                                            }
+                                            addMenuExpanded = true
+                                            dirty = true
+                                        }
+                                        value.contains("\n") -> {
+                                            val split = value.split("\n", limit = 2)
+                                            val m = blocks.toMutableList()
+                                            m[index] = block.copy(content = split[0])
+                                            m.add(
+                                                index + 1,
+                                                NoteBlock(
+                                                    id = java.util.UUID.randomUUID().toString(),
+                                                    type = NoteBlockType.TEXT,
+                                                    content = split.getOrElse(1) { "" },
+                                                    position = index + 1
+                                                )
+                                            )
+                                            blocks = m
+                                            dirty = true
+                                        }
+                                        else -> {
+                                            blocks = blocks.map {
+                                                if (it.id == block.id) it.copy(content = value) else it
+                                            }
+                                            dirty = true
+                                        }
+                                    }
+                                },
+                                placeholder = {
+                                    Text(
+                                        hint,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                    )
+                                },
+                                minLines = 1,
+                                textStyle = when (block.type) {
+                                    NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                    NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                                    NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
+                                    else -> MaterialTheme.typography.bodyLarge
+                                },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }

@@ -1,7 +1,7 @@
 {
-  "versionCode": 52,
-  "versionName": "0.3.46",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.46/MilseongJeil-v0.3.46.apk",
-  "sha256": "e13794048862bf4e6e68a20b6a8969ea2d2449f3073a946fb0a55e4fc333bd3f",
-  "notes": "v0.3.46: 메모 카드에 수정/삭제 버튼을 상시 표시하고 삭제 확인창을 추가했습니다."
+  "versionCode": 53,
+  "versionName": "0.3.47",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.47/MilseongJeil-v0.3.47.apk",
+  "sha256": "5c2da0e9a240e2ffa530a40dbf090e23433a5e234ac7814b4ca2bc05c762b5b2",
+  "notes": "v0.3.47: 홈 위젯의 수업 시작/종료 남은 시간을 실시간 카운트다운으로 표시하고, 수업 경계 시점에 위젯 상태를 자동 갱신합니다."
 }

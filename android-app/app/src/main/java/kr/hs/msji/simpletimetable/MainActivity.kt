@@ -2197,14 +2197,20 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 } else {
                                     vm.updateMemo(id, text, category, checklist, title, priority, pendingAttachments)
                                 }
-                                text = ""
-                                title = ""
-                                category = "일반"
-                                checklist = false
-                                priority = 0
-                                pendingAttachments = emptyList()
-                                editingId = null
-                                vm.saveMemoDraft("", "일반", false, "", 0)
+                                completeMemoSaveUi(
+                                    resetEditor = {
+                                        text = ""
+                                        title = ""
+                                        category = "일반"
+                                        checklist = false
+                                        priority = 0
+                                        pendingAttachments = emptyList()
+                                        editingId = null
+                                        vm.saveMemoDraft("", "일반", false, "", 0)
+                                    },
+                                    clearFocus = { focusManager.clearFocus() },
+                                    hideKeyboard = { keyboardController?.hide() }
+                                )
                             },
                             shape = RoundedCornerShape(14.dp)
                         ) {

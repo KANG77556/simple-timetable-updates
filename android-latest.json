@@ -1,7 +1,7 @@
 {
-  "versionCode": 49,
-  "versionName": "0.3.43",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.43/MilseongJeil-v0.3.43.apk",
-  "sha256": "951be4de77c42ebed1a8cafa3d4d14139fe52b7ba8dddff290ca87a3f1a7118d",
-  "notes": "v0.3.43: 설정에서 위젯 글자 크기를 조절할 수 있도록 추가하고, 메모 입력 시 키보드가 내용을 가리지 않도록 개선했습니다."
+  "versionCode": 50,
+  "versionName": "0.3.44",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.44/MilseongJeil-v0.3.44.apk",
+  "sha256": "c37fb9708a654c1c84458849549632ce14c25a116ab707da72dc67de90a8a2c7",
+  "notes": "v0.3.44: 노션형 페이지/블록 메모, 기존 메모 자동 변환, SCERP PC/웹/Android 메모 동기화 기능을 추가했습니다."
 }

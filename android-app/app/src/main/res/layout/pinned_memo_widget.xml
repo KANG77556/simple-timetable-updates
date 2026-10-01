@@ -7,6 +7,7 @@
     android:background="@drawable/widget_background">
 
     <TextView
+        android:id="@+id/memo_widget_heading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="고정 메모"

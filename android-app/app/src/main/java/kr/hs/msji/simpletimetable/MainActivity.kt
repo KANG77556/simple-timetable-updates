@@ -1816,6 +1816,16 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
+internal fun completeMemoSaveUi(
+    resetEditor: () -> Unit,
+    clearFocus: () -> Unit,
+    hideKeyboard: () -> Unit
+) {
+    resetEditor()
+    clearFocus()
+    hideKeyboard()
+}
+
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     val context = LocalContext.current

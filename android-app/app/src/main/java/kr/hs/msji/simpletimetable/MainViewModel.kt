@@ -1,4 +1,4 @@
-﻿package kr.hs.msji.simpletimetable
+package kr.hs.msji.simpletimetable
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -19,6 +19,7 @@ data class AppUiState(
     val myTimetable: List<TimetableItem> = emptyList(),
     val allTimetable: List<TimetableItem> = emptyList(),
     val memos: List<MemoItem> = emptyList(),
+    val notePages: List<NotePage> = emptyList(),
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
     val classrooms: List<Classroom> = emptyList(),
@@ -42,6 +43,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = initialMemos,
+            notePages = store.loadNotePages(),
             todos = store.loadTodos(),
             calendar = store.loadCalendar(),
             lastLoginId = store.loginId,
@@ -127,6 +129,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
+    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
+        runTask {
+            val local = store.loadNotePages()
+            val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
+            val remote = api.fetchNotePages()
+            val uploadedById = uploaded.associateBy { it.id }
+            val merged = remote.map { summary -> uploadedById[summary.id] ?: summary }
+                .plus(uploaded.filter { saved -> remote.none { it.id == saved.id } })
+                .distinctBy { it.id }
+                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+            store.saveNotePages(merged)
+            _state.value = _state.value.copy(notePages = merged)
+        }
+    }
+
+    fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        runTask {
+            val page = api.fetchNote(id)
+            val list = _state.value.notePages.filterNot { it.id == id } + page
+            store.saveNotePages(list)
+            _state.value = _state.value.copy(notePages = list)
+        }
+    }
+
+    fun saveNotePage(page: NotePage) = viewModelScope.launch(Dispatchers.IO) {
+        val pending = page.copy(syncState = "PENDING")
+        val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+        store.saveNotePages(local)
+        _state.value = _state.value.copy(notePages = local)
+        runTask {
+            val saved = api.saveNote(pending)
+            val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
+                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+            store.saveNotePages(next)
+            _state.value = _state.value.copy(notePages = next)
+        }
+    }
+
+    fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        runTask {
+            api.archiveNote(id)
+            val next = _state.value.notePages.filterNot { it.id == id }
+            store.saveNotePages(next)
+            _state.value = _state.value.copy(notePages = next)
+        }
+    }
     fun addMemo(
         text: String,
         category: String = "일반",

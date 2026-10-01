@@ -2122,30 +2122,47 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
 
-        OutlinedTextField(
+        TextField(
             value = title,
             onValueChange = {
                 title = it
                 dirty = true
             },
-            placeholder = { Text("제목") },
-            textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            placeholder = {
+                Text(
+                    "제목 없음",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            },
+            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp, max = 64.dp)
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                "속성",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(10.dp))
             Box {
-                AssistChip(
+                TextButton(
                     onClick = { categoryMenuExpanded = true },
-                    label = { Text(category.ifBlank { "개인" }) }
-                )
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) { Text(category.ifBlank { "개인" }) }
                 DropdownMenu(
                     expanded = categoryMenuExpanded,
                     onDismissRequest = { categoryMenuExpanded = false }
@@ -2163,11 +2180,15 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
         }
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 6.dp),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+        )
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(bottom = 8.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            contentPadding = PaddingValues(bottom = 72.dp)
         ) {
             items(blocks, key = { it.id }) { block ->
                 val index = blocks.indexOfFirst { it.id == block.id }
@@ -2175,10 +2196,10 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
+                    shape = RoundedCornerShape(0.dp),
+                    color = Color.Transparent
                 ) {
-                    Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                    Column(Modifier.padding(horizontal = 2.dp, vertical = 2.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (block.type == NoteBlockType.TODO) {
                                 Checkbox(
@@ -2209,7 +2230,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 },
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                             )
 
                             Box {
@@ -2282,25 +2303,56 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 else -> "내용을 입력하세요"
                             }
 
-                            OutlinedTextField(
-                                value = block.content,
-                                onValueChange = { value ->
-                                    blocks = blocks.map {
-                                        if (it.id == block.id) it.copy(content = value) else it
-                                    }
-                                    dirty = true
-                                },
-                                placeholder = { Text(hint) },
-                                minLines = 1,
-                                textStyle = when (block.type) {
-                                    NoteBlockType.HEADING1 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                    NoteBlockType.HEADING2 -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                                    NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
-                                    else -> MaterialTheme.typography.bodyLarge
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                val prefix = when (block.type) {
+                                    NoteBlockType.BULLET -> "•"
+                                    NoteBlockType.NUMBER -> "${index + 1}."
+                                    NoteBlockType.QUOTE -> "│"
+                                    else -> ""
+                                }
+                                if (prefix.isNotBlank()) {
+                                    Text(
+                                        prefix,
+                                        modifier = Modifier.padding(top = 14.dp, end = 6.dp),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                TextField(
+                                    value = block.content,
+                                    onValueChange = { value ->
+                                        blocks = blocks.map {
+                                            if (it.id == block.id) it.copy(content = value) else it
+                                        }
+                                        dirty = true
+                                    },
+                                    placeholder = {
+                                        Text(
+                                            hint,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    },
+                                    minLines = 1,
+                                    textStyle = when (block.type) {
+                                        NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                        NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
+                                        else -> MaterialTheme.typography.bodyLarge
+                                    },
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -2309,15 +2361,18 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box {
-                FilledTonalButton(
+                TextButton(
                     onClick = { addMenuExpanded = true },
-                    shape = RoundedCornerShape(18.dp)
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("＋", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "＋  블록 추가",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 DropdownMenu(

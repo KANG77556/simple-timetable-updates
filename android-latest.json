@@ -1,7 +1,7 @@
 {
-    "versionCode":  55,
-    "versionName":  "0.3.49",
-    "apkUrl":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.49/MilseongJeil-v0.3.49.apk",
-    "sha256":  "b9130baa15fe30db68917c27edd95ca8abb480ba95d1a7eeddfae5b44023c756",
-    "notes":  "v0.3.49: 메모 편집 화면을 노션 스타일 문서형 UI로 개편했습니다. 제목·본문 블록 테두리를 제거하고, 속성 행·목록/번호/인용 접두어·블록 추가 메뉴를 간결하게 정리했습니다."
+    "versionCode":  56,
+    "versionName":  "0.3.50",
+    "apkUrl":  "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.50/MilseongJeil-v0.3.50.apk",
+    "sha256":  "6f7d1062ccc5eb5120b53cf70e349dafbe4f0e59f944c4a6a6ccd6f1d0b9d096",
+    "notes":  "v0.3.50: 메모 목록을 노션에 가까운 평면형 페이지 목록으로 변경하고, 편집기 블록 타입 라벨을 제거해 블록 핸들 중심으로 단순화했습니다. 운영 Supabase note 동기화 오류도 수정되었습니다."
 }

@@ -112,6 +112,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(today = date, myTimetable = rows)
     }
 
+    fun preloadAllIfNeeded() {
+        if (!_state.value.loggedIn || _state.value.allTimetable.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { refreshAllWeekDirect(_state.value.today) }
+        }
+    }
+
+    fun preloadClassroomsIfNeeded() {
+        if (!_state.value.loggedIn || _state.value.classrooms.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val rooms = api.fetchClassrooms()
+                _state.value = _state.value.copy(classrooms = rooms)
+            }
+        }
+    }
+
     fun refreshAll(date: String = _state.value.today) = viewModelScope.launch(Dispatchers.IO) {
         runTask { refreshAllWeekDirect(date) }
     }

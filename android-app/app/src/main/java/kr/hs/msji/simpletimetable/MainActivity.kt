@@ -2428,7 +2428,7 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                         enabled = text.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("추��")
+                        Text("추가")
                     }
                 }
                 Spacer(Modifier.height(6.dp))

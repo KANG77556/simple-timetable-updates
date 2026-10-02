@@ -68,4 +68,16 @@ class TimetableVisualStateTest {
         assertEquals(1, noteNumberOrdinal(blocks, 4))
     }
 
+    @Test
+    fun pinnedNotePageCount_ignoresLegacyAndArchivedPages() {
+        val pages = listOf(
+            NotePage(id = "active", title = "활성 고정", pinned = true, archived = false),
+            NotePage(id = "archived", title = "보관 고정", pinned = true, archived = true),
+            NotePage(id = "plain", title = "일반", pinned = false, archived = false)
+        )
+
+        assertEquals(1, countPinnedActiveNotePages(pages))
+        assertEquals(0, countPinnedActiveNotePages(emptyList()))
+    }
+
 }

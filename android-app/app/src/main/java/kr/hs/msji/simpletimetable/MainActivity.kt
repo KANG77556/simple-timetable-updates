@@ -1047,9 +1047,7 @@ private fun TodayScreen(
                             "오늘 업무",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = 48.dp)
+                            modifier = Modifier.weight(1f)
                         )
                         if (overdueTodos > 0) {
                             Surface(
@@ -2226,8 +2224,22 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
     var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
     var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
-    var blocks by remember(selected.id, selected.blocks) {
-        mutableStateOf(selected.blocks)
+    var blocks by remember(selected.id, selected.blocks, state.loggedIn, selected.syncState) {
+        mutableStateOf(
+            selected.blocks.ifEmpty {
+                if (!state.loggedIn || selected.syncState != "SYNCED") {
+                    listOf(
+                        NoteBlock(
+                            id = java.util.UUID.randomUUID().toString(),
+                            type = NoteBlockType.TEXT,
+                            position = 0
+                        )
+                    )
+                } else {
+                    emptyList()
+                }
+            }
+        )
     }
     var dirty by remember(selected.id) { mutableStateOf(false) }
     var topMenuExpanded by remember(selected.id) { mutableStateOf(false) }
@@ -2454,7 +2466,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 unfocusedIndicatorColor = Color.Transparent,
                                 disabledIndicatorColor = Color.Transparent
                             ),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
                         )
                     }
 
@@ -2497,7 +2511,18 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 })
                             }
                             DropdownMenuItem(text = { Text("삭제") }, onClick = {
-                                blocks = blocks.filterNot { it.id == block.id }
+                                val remaining = blocks.filterNot { it.id == block.id }
+                                blocks = if (remaining.isEmpty()) {
+                                    listOf(
+                                        NoteBlock(
+                                            id = java.util.UUID.randomUUID().toString(),
+                                            type = NoteBlockType.TEXT,
+                                            position = 0
+                                        )
+                                    )
+                                } else {
+                                    remaining
+                                }
                                 dirty = true
                                 blockMenuId = null
                             })

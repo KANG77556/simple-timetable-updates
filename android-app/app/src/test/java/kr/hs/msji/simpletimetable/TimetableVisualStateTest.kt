@@ -54,4 +54,18 @@ class TimetableVisualStateTest {
         assertEquals(first, second)
         assertEquals(subjects.size, first.values.toSet().size)
     }
+    @Test
+    fun noteNumberOrdinal_resetsAfterNonNumberBlock() {
+        val blocks = listOf(
+            NoteBlock("a", NoteBlockType.TEXT),
+            NoteBlock("b", NoteBlockType.NUMBER),
+            NoteBlock("c", NoteBlockType.NUMBER),
+            NoteBlock("d", NoteBlockType.TEXT),
+            NoteBlock("e", NoteBlockType.NUMBER)
+        )
+        assertEquals(1, noteNumberOrdinal(blocks, 1))
+        assertEquals(2, noteNumberOrdinal(blocks, 2))
+        assertEquals(1, noteNumberOrdinal(blocks, 4))
+    }
+
 }

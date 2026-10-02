@@ -2215,7 +2215,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         }
                         val prefix = when (block.type) {
                             NoteBlockType.BULLET -> "•"
-                            NoteBlockType.NUMBER -> index.plus(1).toString() + "."
+                            NoteBlockType.NUMBER -> noteNumberOrdinal(blocks, index).toString() + "."
                             NoteBlockType.QUOTE -> "│"
                             else -> ""
                         }
@@ -3034,6 +3034,18 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
         }
         Spacer(Modifier.height(8.dp))
     }
+}
+
+
+internal fun noteNumberOrdinal(blocks: List<NoteBlock>, index: Int): Int {
+    if (index !in blocks.indices || blocks[index].type != NoteBlockType.NUMBER) return 0
+    var ordinal = 1
+    var cursor = index - 1
+    while (cursor >= 0 && blocks[cursor].type == NoteBlockType.NUMBER) {
+        ordinal += 1
+        cursor -= 1
+    }
+    return ordinal
 }
 
 private val TIMETABLE_SUBJECT_PALETTE = listOf(

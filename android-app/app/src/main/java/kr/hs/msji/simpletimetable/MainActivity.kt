@@ -2693,9 +2693,7 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                                 todo.text,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = if (todo.done) FontWeight.Normal else FontWeight.Medium,
-                                color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 when {

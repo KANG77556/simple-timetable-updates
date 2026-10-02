@@ -799,6 +799,18 @@ private fun TodayScreen(
     val dateLabel = remember(selectedDate) {
         selectedDate.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN))
     }
+    val context = LocalContext.current
+    val openDatePicker = {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                vm.selectDate(LocalDate.of(year, month + 1, dayOfMonth))
+            },
+            selectedDate.year,
+            selectedDate.monthValue - 1,
+            selectedDate.dayOfMonth
+        ).show()
+    }
 
     Column(
         Modifier
@@ -844,7 +856,9 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp),
+                    .height(48.dp)
+                    .semantics { contentDescription = "날짜 선택: $dateLabel" }
+                    .clickable(onClick = openDatePicker),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = androidx.compose.foundation.BorderStroke(
@@ -852,7 +866,18 @@ private fun TodayScreen(
                     MaterialTheme.colorScheme.outline
                 )
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Filled.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         dateLabel,
                         style = MaterialTheme.typography.titleMedium,

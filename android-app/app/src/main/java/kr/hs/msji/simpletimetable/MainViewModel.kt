@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +29,7 @@ data class AppUiState(
     val calendarTimetable: List<TimetableItem> = emptyList(),
     val calendarTimetableMonth: String = "",
     val calendarTimetableUserId: String = "",
+    val calendarTimetableError: String = "",
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
     val message: String = ""
@@ -37,6 +40,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val api = ScerpApi(store)
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
     @Volatile private var calendarTimetableRequestKey: String = ""
+    private var calendarTimetableJob: Job? = null
     private val initialNotePages = run {
         store.ensureNoteAccount(store.userId)
         store.loadNotePages()
@@ -85,6 +89,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             store.loginId = loginId.trim()
             val accountNotes = store.loadNotePages()
             calendarTimetableRequestKey = ""
+            calendarTimetableJob?.cancel()
+            calendarTimetableJob = null
             _state.value = _state.value.copy(
                 loggedIn = true,
                 profile = profile,
@@ -92,7 +98,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pinnedNoteCount = null,
                 calendarTimetable = emptyList(),
                 calendarTimetableMonth = "",
-                calendarTimetableUserId = ""
+                calendarTimetableUserId = "",
+                calendarTimetableError = ""
             )
             refreshTodayDirect(profile.userId)
         }
@@ -159,31 +166,65 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val monthKey = month.toString()
         if (
             _state.value.calendarTimetableMonth == monthKey &&
-            _state.value.calendarTimetableUserId == userId
+            _state.value.calendarTimetableUserId == userId &&
+            _state.value.calendarTimetableError.isBlank()
         ) return
 
         val requestKey = userId + "|" + monthKey
         calendarTimetableRequestKey = requestKey
+        calendarTimetableJob?.cancel()
 
-        viewModelScope.launch(Dispatchers.IO) {
-            runTask {
+        calendarTimetableJob = viewModelScope.launch(Dispatchers.IO) {
+            _state.value = _state.value.copy(loading = true, calendarTimetableError = "")
+            try {
                 val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
-                val rows = (1..month.lengthOfMonth())
-                    .map { month.atDay(it) }
-                    .filter { it.dayOfWeek.value in 1..5 }
-                    .flatMap { date ->
-                        api.fetchMyTimetable(date.toString(), userId, displayName)
-                    }
+                val rows = mutableListOf<TimetableItem>()
+                for (day in 1..month.lengthOfMonth()) {
+                    if (calendarTimetableRequestKey != requestKey) return@launch
+                    val date = month.atDay(day)
+                    if (date.dayOfWeek.value !in 1..5) continue
+                    rows += api.fetchMyTimetable(date.toString(), userId, displayName)
+                }
+                val normalized = rows
                     .filter { it.subject.isNotBlank() || it.room.isNotBlank() || it.startTime.isNotBlank() }
                     .distinctBy { "${it.date}-${it.period}-${it.subject}-${it.room}" }
                     .sortedWith(compareBy<TimetableItem>({ it.date }, { it.period }))
 
                 if (calendarTimetableRequestKey == requestKey) {
                     _state.value = _state.value.copy(
-                        calendarTimetable = rows,
+                        calendarTimetable = normalized,
                         calendarTimetableMonth = monthKey,
-                        calendarTimetableUserId = userId
+                        calendarTimetableUserId = userId,
+                        calendarTimetableError = ""
                     )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val apiError = e as? ScerpApiException
+                if (apiError?.code == "authentication_required") {
+                    store.clearSession()
+                    calendarTimetableRequestKey = ""
+                    _state.value = _state.value.copy(
+                        loggedIn = false,
+                        classrooms = emptyList(),
+                        calendarTimetable = emptyList(),
+                        calendarTimetableMonth = "",
+                        calendarTimetableUserId = "",
+                        calendarTimetableError = "",
+                        message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
+                    )
+                } else if (calendarTimetableRequestKey == requestKey) {
+                    _state.value = _state.value.copy(
+                        calendarTimetable = emptyList(),
+                        calendarTimetableMonth = monthKey,
+                        calendarTimetableUserId = userId,
+                        calendarTimetableError = apiError?.message ?: e.message ?: "수업을 불러오지 못했습니다."
+                    )
+                }
+            } finally {
+                if (calendarTimetableRequestKey == requestKey) {
+                    _state.value = _state.value.copy(loading = false)
                 }
             }
         }
@@ -607,10 +648,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             block()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             val apiError = e as? ScerpApiException
             if (apiError?.code == "authentication_required") {
                 store.clearSession()
                 calendarTimetableRequestKey = ""
+                calendarTimetableJob?.cancel()
+                calendarTimetableJob = null
                 _state.value = _state.value.copy(
                     loggedIn = false,
                     classrooms = emptyList(),

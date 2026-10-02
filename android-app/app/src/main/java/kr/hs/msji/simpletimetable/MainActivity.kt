@@ -1241,6 +1241,19 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedGrade by remember { mutableIntStateOf(3) }
     var query by remember { mutableStateOf("") }
     var filtersExpanded by remember { mutableStateOf(false) }
+    var schoolClock by remember {
+        mutableStateOf(java.time.ZonedDateTime.now(SCHOOL_ZONE))
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            schoolClock = java.time.ZonedDateTime.now(SCHOOL_ZONE)
+        }
+    }
+
+    val currentSchoolDate = schoolClock.toLocalDate()
+    val currentSchoolTime = schoolClock.toLocalTime()
 
     val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
     val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
@@ -1710,8 +1723,14 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 
                         visiblePeriods.forEach { period ->
                             val currentPeriodRow = selectedRows
-                                .firstOrNull { it.period == period && it.date == schoolToday().toString() }
-                                ?.let { isCurrentTimetableLesson(it) } == true
+                                .firstOrNull { it.period == period && it.date == currentSchoolDate.toString() }
+                                ?.let {
+                                    isCurrentTimetableLesson(
+                                        row = it,
+                                        today = currentSchoolDate,
+                                        now = currentSchoolTime
+                                    )
+                                } == true
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1772,7 +1791,11 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                         }
                                     } else {
                                         val cellColor = subjectColors[row.subject.trim()].orEmptyColor()
-                                        val currentCell = isCurrentTimetableLesson(row)
+                                        val currentCell = isCurrentTimetableLesson(
+                                            row = row,
+                                            today = currentSchoolDate,
+                                            now = currentSchoolTime
+                                        )
                                         Surface(
                                             modifier = Modifier
                                                 .weight(1f)

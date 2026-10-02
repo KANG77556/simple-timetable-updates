@@ -796,8 +796,27 @@ private fun TodayScreen(
     val status = remember(state.myTimetable, state.today) {
         if (isToday) TimetableStatus.calculate(state.myTimetable) else ClassStatus()
     }
-    val dateLabel = remember(selectedDate) {
-        selectedDate.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN))
+    val configuration = LocalConfiguration.current
+    val compactDateLabel = configuration.screenWidthDp < 380 || configuration.fontScale >= 1.15f
+    val dateLabel = remember(selectedDate, compactDateLabel) {
+        selectedDate.format(
+            DateTimeFormatter.ofPattern(
+                if (compactDateLabel) "yyyy. M. d. (E)" else "yyyy년 M월 d일 (E)",
+                Locale.KOREAN
+            )
+        )
+    }
+    val context = LocalContext.current
+    val openDatePicker = {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                vm.selectDate(LocalDate.of(year, month + 1, dayOfMonth))
+            },
+            selectedDate.year,
+            selectedDate.monthValue - 1,
+            selectedDate.dayOfMonth
+        ).show()
     }
 
     Column(
@@ -844,7 +863,9 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp),
+                    .height(48.dp)
+                    .semantics { contentDescription = "날짜 선택: $dateLabel" }
+                    .clickable(onClick = openDatePicker),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = androidx.compose.foundation.BorderStroke(
@@ -852,11 +873,27 @@ private fun TodayScreen(
                     MaterialTheme.colorScheme.outline
                 )
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = if (compactDateLabel) 8.dp else 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (!compactDateLabel) {
+                        Icon(
+                            Icons.Filled.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
                         dateLabel,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
                     )
                 }
             }

@@ -54,6 +54,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val state: StateFlow<AppUiState> = _state
 
+    init {
+        if (_state.value.loggedIn) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val userId = _state.value.profile.userId.ifBlank { store.userId }
+                if (userId.isNotBlank()) {
+                    runTask { refreshTodayDirect(userId) }
+                }
+            }
+        }
+    }
+
     fun login(loginId: String, password: String) = viewModelScope.launch(Dispatchers.IO) {
         runTask {
             val profile = api.login(loginId, password)

@@ -1,7 +1,7 @@
 {
-  "versionCode": 62,
-  "versionName": "0.3.56",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.56/MilseongJeil-v0.3.56.apk",
-  "sha256": "473ed507e87d825d292a70686e7afb696fa3d8026e4c9b8a1e84116778379795",
-  "notes": "v0.3.56: 메모 입력 중 키보드가 편집 영역을 가리는 문제를 수정했습니다. 키보드 표시 시 속성 영역을 자동 축소하고, 블록 추가 컨트롤을 스크롤 영역으로 이동했으며, / 명령 팝업은 항상 동작하도록 수정했습니다."
+  "versionCode": 64,
+  "versionName": "0.3.58",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.58/MilseongJeil-v0.3.58.apk",
+  "sha256": "7504d257a5ce40a07921738ec437e4c11568e4cdb52cb849f2c68f66c184bd89",
+  "notes": "v0.3.58: 메모 페이지 목록을 더 간결한 문서형 UI로 정리했습니다. 중복 헤더와 여백을 줄이고, 검색창과 새 페이지 버튼을 축소했으며, 최근 수정 시각을 표시합니다. 기존 페이지 삭제 기능과 키보드 대응은 유지합니다."
 }

@@ -2533,6 +2533,7 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
     val overdueCount = activeTodos.count {
         runCatching { LocalDate.parse(it.dueDate).isBefore(today) }.getOrDefault(false)
     }
+    val validDate = runCatching { LocalDate.parse(date) }.isSuccess
 
     Column(
         Modifier
@@ -2540,39 +2541,58 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
             .padding(horizontal = 16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "해야 할 일을 마감일 기준으로 관리하세요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (overdueCount > 0) "지연된 할 일 ${overdueCount}개" else "할 일 ${activeTodos.size}개",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (overdueCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = if (overdueCount > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+            TextButton(
+                onClick = { showCompleted = !showCompleted },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text(
-                    if (overdueCount > 0) "지연 " + overdueCount + "개" else "진행 " + activeTodos.size + "개",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(if (showCompleted) "진행 보기" else "완료 ${completedTodos.size}")
             }
         }
 
-        ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(14.dp)) {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 1.dp
+        ) {
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("할 일을 입력하세요") },
-                    shape = RoundedCornerShape(14.dp)
-                )
-                Spacer(Modifier.height(8.dp))
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        modifier = Modifier.weight(1f).heightIn(min = 50.dp),
+                        singleLine = true,
+                        placeholder = { Text("새 할 일") },
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    FilledTonalButton(
+                        onClick = {
+                            vm.addTodo(text, date)
+                            text = ""
+                        },
+                        enabled = text.isNotBlank() && validDate,
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)
+                    ) {
+                        Text("추가")
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -2580,34 +2600,35 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                     OutlinedTextField(
                         value = date,
                         onValueChange = { date = it },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(min = 46.dp),
                         singleLine = true,
-                        label = { Text("마감일") },
+                        label = { Text("마감") },
                         placeholder = { Text("YYYY-MM-DD") },
-                        shape = RoundedCornerShape(14.dp)
+                        isError = date.isNotBlank() && !validDate,
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            vm.addTodo(text, date)
-                            text = ""
-                        },
-                        enabled = text.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess,
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("추가")
-                    }
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Spacer(Modifier.width(6.dp))
                     AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
+                    Spacer(Modifier.width(5.dp))
                     AssistChip(onClick = { date = today.plusDays(1).toString() }, label = { Text("내일") })
-                    AssistChip(onClick = { date = today.plusWeeks(1).toString() }, label = { Text("다음 주") })
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = { date = today.plusWeeks(1).toString() },
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 1.dp)
+                    ) {
+                        Text("다음 주")
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(7.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -2616,46 +2637,42 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
             FilterChip(
                 selected = !showCompleted,
                 onClick = { showCompleted = false },
-                label = { Text("진행 중 " + activeTodos.size) },
+                label = { Text("진행 ${activeTodos.size}") },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 selected = showCompleted,
                 onClick = { showCompleted = true },
-                label = { Text("완료 " + completedTodos.size) },
+                label = { Text("완료 ${completedTodos.size}") },
                 modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(5.dp))
 
         if (visibleTodos.isEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 44.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 36.dp, horizontal = 18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        if (showCompleted) "완료된 할 일이 없습니다." else "진행 중인 할 일이 없습니다.",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        if (showCompleted) "완료한 항목이 여기에 모입니다." else "위 입력창에서 할 일을 추가해 보세요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    if (showCompleted) "완료된 할 일이 없습니다." else "진행 중인 할 일이 없습니다.",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (showCompleted) "완료한 항목이 여기에 표시됩니다." else "위에서 새 할 일을 추가하세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
                 contentPadding = PaddingValues(bottom = 12.dp)
             ) {
                 items(visibleTodos, key = { it.id }) { todo ->
@@ -2663,50 +2680,55 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                     val overdue = !todo.done && due != null && due.isBefore(today)
                     val dueToday = due == today
 
-                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = todo.done,
-                                onCheckedChange = { vm.toggleTodo(todo.id) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = todo.done,
+                            onCheckedChange = { vm.toggleTodo(todo.id) }
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                todo.text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (todo.done) FontWeight.Normal else FontWeight.Medium,
+                                color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    todo.text,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = if (todo.done) FontWeight.Normal else FontWeight.SemiBold,
-                                    color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(Modifier.height(3.dp))
-                                Text(
-                                    when {
-                                        overdue -> "마감 지남 · " + todo.dueDate
-                                        dueToday -> "오늘 마감 · " + todo.dueDate
-                                        else -> "마감 " + todo.dueDate
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            TextButton(
-                                onClick = { vm.todoToCalendar(todo.id) },
-                                enabled = !todo.done
-                            ) {
-                                Icon(Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
-                                Spacer(Modifier.width(3.dp))
-                                Text("일정")
-                            }
-                            IconButton(onClick = { vm.deleteTodo(todo.id) }) {
+                            Text(
+                                when {
+                                    overdue -> "마감 지남 · ${todo.dueDate}"
+                                    dueToday -> "오늘 · ${todo.dueDate}"
+                                    else -> todo.dueDate
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!todo.done) {
+                            IconButton(onClick = { vm.todoToCalendar(todo.id) }) {
                                 Icon(
-                                    Icons.Filled.Delete,
-                                    contentDescription = "할 일 삭제",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    Icons.Filled.DateRange,
+                                    contentDescription = "일정으로 보내기",
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
+                        IconButton(onClick = { vm.deleteTodo(todo.id) }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "할 일 삭제",
+                                modifier = Modifier.size(19.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 48.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+                    )
                 }
             }
         }

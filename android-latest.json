@@ -1,7 +1,7 @@
 {
-  "versionCode": 58,
-  "versionName": "0.3.52",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.52/MilseongJeil-v0.3.52.apk",
-  "sha256": "c2e366a6047028ff32f799df132abc3989350bf9a9ff03d8328734ecb031c87f",
-  "notes": "v0.3.52: 로그인 세션이 유지된 상태로 앱을 시작할 때 오늘 시간표를 서버에서 자동 새로고침하도록 수정했습니다."
+  "versionCode": 60,
+  "versionName": "0.3.54",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.54/MilseongJeil-v0.3.54.apk",
+  "sha256": "49ff3eb691618016e420f162e95e783ed5762f36899d941457fe5c9af7ec766a",
+  "notes": "v0.3.54: 주간 시간표의 현재 수업을 더 눈에 띄게 강조하고 과목별 색상을 구분했습니다. 현재 교시 강조는 시간 흐름에 따라 자동 갱신됩니다."
 }

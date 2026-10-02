@@ -1,7 +1,7 @@
 {
-  "versionCode": 68,
-  "versionName": "0.3.62",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.62/MilseongJeil-v0.3.62.apk",
-  "sha256": "da0d0d09709590f6b10349e8acda2aa6ceead3a733813eac6d433c14a7faf2ff",
-  "notes": "v0.3.62: TODO 마감일을 달력에서 선택할 수 있도록 개선했습니다. 날짜 입력란 또는 달력 아이콘을 누르면 날짜 선택창이 열리며, 기존 오늘/내일/다음 주 빠른 선택도 유지됩니다."
+  "versionCode": 69,
+  "versionName": "0.3.63",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.63/MilseongJeil-v0.3.63.apk",
+  "sha256": "8862b639fdf34c2577074fe00c51547217012a3d835f3177d707d02feb0c0f59",
+  "notes": "v0.3.63: 캘린더에 교사 개인 수업을 날짜별로 표시합니다. 월간 달력에 수업 수를 표시하고 날짜를 선택하면 교시·과목·시간·학급·교실을 확인할 수 있습니다. 개인 일정과 공휴일 표시는 유지하며 월 이동 시 수업을 자동 갱신합니다."
 }

@@ -2338,30 +2338,6 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             slashTargetId = null
                             addMenuExpanded = true
                         }) { Text("+  블록 추가") }
-                        DropdownMenu(
-                            expanded = addMenuExpanded,
-                            onDismissRequest = {
-                                addMenuExpanded = false
-                                slashTargetId = null
-                            }
-                        ) {
-                            listOf(
-                                NoteBlockType.TEXT to "텍스트",
-                                NoteBlockType.HEADING1 to "제목 1",
-                                NoteBlockType.HEADING2 to "제목 2",
-                                NoteBlockType.TODO to "체크리스트",
-                                NoteBlockType.BULLET to "글머리 기호",
-                                NoteBlockType.NUMBER to "번호 매기기",
-                                NoteBlockType.QUOTE to "인용",
-                                NoteBlockType.CODE to "코드",
-                                NoteBlockType.LINK to "링크",
-                                NoteBlockType.IMAGE to "이미지",
-                                NoteBlockType.FILE to "파일",
-                                NoteBlockType.DIVIDER to "구분선"
-                            ).forEach { (type, label) ->
-                                DropdownMenuItem(text = { Text(label) }, onClick = { addOrTransformBlock(type) })
-                            }
-                        }
                     }
                     Spacer(Modifier.weight(1f))
                     Text("/ 명령", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2370,7 +2346,32 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             }
         }
 
-
+        Box(modifier = Modifier.size(1.dp)) {
+            DropdownMenu(
+                expanded = addMenuExpanded,
+                onDismissRequest = {
+                    addMenuExpanded = false
+                    slashTargetId = null
+                }
+            ) {
+                listOf(
+                    NoteBlockType.TEXT to "텍스트",
+                    NoteBlockType.HEADING1 to "제목 1",
+                    NoteBlockType.HEADING2 to "제목 2",
+                    NoteBlockType.TODO to "체크리스트",
+                    NoteBlockType.BULLET to "글머리 기호",
+                    NoteBlockType.NUMBER to "번호 매기기",
+                    NoteBlockType.QUOTE to "인용",
+                    NoteBlockType.CODE to "코드",
+                    NoteBlockType.LINK to "링크",
+                    NoteBlockType.IMAGE to "이미지",
+                    NoteBlockType.FILE to "파일",
+                    NoteBlockType.DIVIDER to "구분선"
+                ).forEach { (type, label) ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { addOrTransformBlock(type) })
+                }
+            }
+        }
     }
 }
 

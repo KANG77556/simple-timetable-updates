@@ -18,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.Instant
 import java.time.ZoneId
@@ -759,6 +761,17 @@ private val SCHOOL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
 
 internal fun schoolToday(): LocalDate = LocalDate.now(SCHOOL_ZONE)
 
+internal fun isCurrentTimetableLesson(
+    row: TimetableItem,
+    today: LocalDate = schoolToday(),
+    now: LocalTime = LocalTime.now(SCHOOL_ZONE)
+): Boolean {
+    if (row.date != today.toString()) return false
+    val start = runCatching { LocalTime.parse(row.startTime.take(5)) }.getOrNull() ?: return false
+    val end = runCatching { LocalTime.parse(row.endTime.take(5)) }.getOrNull() ?: return false
+    return !now.isBefore(start) && now.isBefore(end)
+}
+
 @Composable
 private fun TodayScreen(
     state: AppUiState,
@@ -1228,6 +1241,19 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     var selectedGrade by remember { mutableIntStateOf(3) }
     var query by remember { mutableStateOf("") }
     var filtersExpanded by remember { mutableStateOf(false) }
+    var schoolClock by remember {
+        mutableStateOf(java.time.ZonedDateTime.now(SCHOOL_ZONE))
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            schoolClock = java.time.ZonedDateTime.now(SCHOOL_ZONE)
+        }
+    }
+
+    val currentSchoolDate = schoolClock.toLocalDate()
+    val currentSchoolTime = schoolClock.toLocalTime()
 
     val gradeRows = state.allTimetable.filter { it.grade == selectedGrade }
     val classes = gradeRows.map { it.classCode }.distinct().sortedWith(
@@ -1454,6 +1480,9 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
             val selectedRows = gradeRows.filter {
                 it.classCode == selectedClass && it.hasVisibleLessonContent()
             }
+            val subjectColors = remember(selectedRows) {
+                timetableSubjectColors(selectedRows.map { it.subject })
+            }
             val visiblePeriods = selectedRows.map { it.period }.distinct().sorted()
             val formatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.KOREA) }
             val rangeFormatter = remember { DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREA) }
@@ -1557,7 +1586,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(18.dp),
-                                color = timetableSubjectColor(row.subject).copy(alpha = 0.88f)
+                                color = subjectColors[row.subject.trim()].orEmptyColor().copy(alpha = 0.92f)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -1693,10 +1722,33 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                         }
 
                         visiblePeriods.forEach { period ->
+                            val currentPeriodRow = selectedRows
+                                .firstOrNull { it.period == period && it.date == currentSchoolDate.toString() }
+                                ?.let {
+                                    isCurrentTimetableLesson(
+                                        row = it,
+                                        today = currentSchoolDate,
+                                        now = currentSchoolTime
+                                    )
+                                } == true
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(92.dp)
+                                    .then(
+                                        if (currentPeriodRow) {
+                                            Modifier
+                                                .background(
+                                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.20f),
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .border(
+                                                    2.dp,
+                                                    MaterialTheme.colorScheme.primary,
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                        } else Modifier
+                                    )
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -1738,12 +1790,26 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                             )
                                         }
                                     } else {
-                                        val cellColor = remember(row.subject) { timetableSubjectColor(row.subject) }
+                                        val cellColor = subjectColors[row.subject.trim()].orEmptyColor()
+                                        val currentCell = isCurrentTimetableLesson(
+                                            row = row,
+                                            today = currentSchoolDate,
+                                            now = currentSchoolTime
+                                        )
                                         Surface(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .fillMaxHeight()
-                                                .padding(2.dp),
+                                                .padding(2.dp)
+                                                .then(
+                                                    if (currentCell) {
+                                                        Modifier.border(
+                                                            3.dp,
+                                                            Color(0xFFFF4F87),
+                                                            RoundedCornerShape(10.dp)
+                                                        )
+                                                    } else Modifier
+                                                ),
                                             shape = RoundedCornerShape(10.dp),
                                             color = cellColor
                                         ) {
@@ -1753,6 +1819,21 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
                                                     .padding(horizontal = 7.dp, vertical = 6.dp),
                                                 verticalArrangement = Arrangement.Center
                                             ) {
+                                                if (currentCell) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(999.dp),
+                                                        color = Color(0xFFFFD7E3)
+                                                    ) {
+                                                        Text(
+                                                            "지금 수업",
+                                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = Color(0xFF9B173F),
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                    Spacer(Modifier.height(2.dp))
+                                                }
                                                 Text(
                                                     row.subject.ifBlank { "과목 미지정" },
                                                     style = MaterialTheme.typography.labelLarge,
@@ -3087,17 +3168,25 @@ private fun BroadcastScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
-private fun timetableSubjectColor(subject: String): Color {
-    val palette = listOf(
-        Color(0xFF315B8A), Color(0xFF7A4330), Color(0xFF3E7048), Color(0xFF5D477F),
-        Color(0xFF8A3D50), Color(0xFF2B7076), Color(0xFF6C5B2F), Color(0xFF4C6285),
-        Color(0xFF7B553B), Color(0xFF47723E), Color(0xFF674B78), Color(0xFF8A4B63),
-        Color(0xFF2F6C5F), Color(0xFF765F35), Color(0xFF405D7A), Color(0xFF80513C),
-        Color(0xFF3D6A59), Color(0xFF594F81), Color(0xFF8B4650), Color(0xFF356D78),
-        Color(0xFF6F6338), Color(0xFF4A5A86), Color(0xFF7F4937), Color(0xFF4B713F)
-    )
-    val normalized = subject.trim().lowercase(Locale.KOREA)
-    val hash = normalized.fold(17) { acc, ch -> acc * 31 + ch.code }
-    val index = (hash and Int.MAX_VALUE) % palette.size
-    return palette[index]
+private val TIMETABLE_SUBJECT_PALETTE = listOf(
+    Color(0xFFB97932), Color(0xFF2F6FED), Color(0xFF25A873), Color(0xFFE13F51),
+    Color(0xFFF4771F), Color(0xFFE5AA12), Color(0xFF8A43E6), Color(0xFF2AA8B5),
+    Color(0xFFD94C8A), Color(0xFF267ABF), Color(0xFF5E9E3E), Color(0xFFD1663B),
+    Color(0xFF6D5BD0), Color(0xFF0F9D8B), Color(0xFFB85A88), Color(0xFF7A6A3E)
+)
+
+internal fun timetableSubjectColorIndexes(subjects: List<String>): Map<String, Int> {
+    val unique = subjects
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+    return unique.mapIndexed { index, subject ->
+        subject to (index % TIMETABLE_SUBJECT_PALETTE.size)
+    }.toMap()
 }
+
+private fun timetableSubjectColors(subjects: List<String>): Map<String, Color> =
+    timetableSubjectColorIndexes(subjects).mapValues { (_, index) -> TIMETABLE_SUBJECT_PALETTE[index] }
+
+private fun Color?.orEmptyColor(): Color = this ?: Color(0xFF405D7A)

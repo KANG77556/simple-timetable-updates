@@ -2286,6 +2286,21 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         exitMemoEditor()
     }
 
+    val latestDraftId by rememberUpdatedState(newDraftPageId)
+    val latestTitle by rememberUpdatedState(title)
+    val latestBlocks by rememberUpdatedState(blocks)
+    DisposableEffect(selected.id) {
+        onDispose {
+            val untouchedNewDraft =
+                latestDraftId == selected.id &&
+                latestTitle.isBlank() &&
+                latestBlocks.all { it.content.isBlank() && !it.checked }
+            if (untouchedNewDraft) {
+                vm.archiveNotePage(selected.id)
+            }
+        }
+    }
+
     fun addOrTransformBlock(type: NoteBlockType) {
         val target = slashTargetId
         if (target != null) {

@@ -18,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -2557,7 +2558,21 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
     var date by remember { mutableStateOf(schoolToday().toString()) }
     var showCompleted by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val today = schoolToday()
+
+    fun openDueDatePicker() {
+        val selected = runCatching { LocalDate.parse(date) }.getOrDefault(today)
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                date = LocalDate.of(year, month + 1, dayOfMonth).toString()
+            },
+            selected.year,
+            selected.monthValue - 1,
+            selected.dayOfMonth
+        ).show()
+    }
     val activeTodos = remember(state.todos) { state.todos.filterNot { it.done }.sortedBy { it.dueDate } }
     val completedTodos = remember(state.todos) { state.todos.filter { it.done }.sortedByDescending { it.dueDate } }
     val visibleTodos = if (showCompleted) completedTodos else activeTodos
@@ -2628,17 +2643,36 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        modifier = Modifier.weight(1f).heightIn(min = 46.dp),
-                        singleLine = true,
-                        label = { Text("마감") },
-                        placeholder = { Text("YYYY-MM-DD") },
-                        isError = date.isNotBlank() && !validDate,
-                        shape = RoundedCornerShape(12.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 46.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = date,
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            readOnly = true,
+                            label = { Text("마감") },
+                            placeholder = { Text("날짜 선택") },
+                            isError = date.isNotBlank() && !validDate,
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Filled.DateRange,
+                                    contentDescription = null
+                                )
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .semantics { contentDescription = "마감 날짜 달력 열기" }
+                                .clickable { openDueDatePicker() }
+                        )
+                    }
                     Spacer(Modifier.width(6.dp))
                     AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
                     Spacer(Modifier.width(5.dp))

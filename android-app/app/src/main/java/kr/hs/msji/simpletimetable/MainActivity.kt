@@ -1925,20 +1925,18 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "페이지",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
                 TextButton(
                     enabled = state.loggedIn && !state.loading,
                     onClick = { vm.refreshNotes() },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                 ) {
-                    Text(if (state.loading) "동기화 중…" else "동기화")
+                    Text(
+                        if (state.loading) "동기화 중…" else "동기화",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
                 FilledTonalButton(
                     enabled = !state.loading,
@@ -1964,13 +1962,13 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         vm.saveNotePage(page)
                         selectedId = page.id
                     },
-                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text("+")
                 }
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
 
             OutlinedTextField(
                 value = query,
@@ -1992,7 +1990,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp)
+                    .heightIn(min = 44.dp)
             )
 
             Spacer(Modifier.height(4.dp))
@@ -2011,27 +2009,56 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 56.dp),
+                        .padding(top = 34.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         Icons.Filled.List,
                         contentDescription = null,
-                        modifier = Modifier.size(34.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.48f)
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(7.dp))
                     Text(
-                        if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.",
+                        if (query.isBlank()) "페이지가 없습니다." else "검색 결과가 없습니다.",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        if (query.isBlank()) "+ 버튼으로 새 페이지를 만드세요." else "다른 검색어를 입력해 보세요.",
+                        if (query.isBlank()) "새 페이지를 만들어 메모를 시작하세요." else "다른 검색어를 입력해 보세요.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (query.isBlank()) {
+                        Spacer(Modifier.height(10.dp))
+                        FilledTonalButton(
+                            enabled = !state.loading,
+                            onClick = {
+                                val now = java.time.Instant.now().toString()
+                                val page = NotePage(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    title = "",
+                                    category = "개인",
+                                    version = 0,
+                                    createdAt = now,
+                                    updatedAt = now,
+                                    blocks = listOf(
+                                        NoteBlock(
+                                            id = java.util.UUID.randomUUID().toString(),
+                                            type = NoteBlockType.TEXT,
+                                            position = 0
+                                        )
+                                    ),
+                                    syncState = "LOCAL"
+                                )
+                                vm.saveNotePage(page)
+                                selectedId = page.id
+                            }
+                        ) {
+                            Text("새 페이지")
+                        }
+                    }
                 }
             } else {
                 LazyColumn(

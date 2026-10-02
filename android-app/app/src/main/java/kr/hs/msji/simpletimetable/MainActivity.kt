@@ -2986,10 +2986,12 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                                             )
                                         } else if (lessonCount > 0) {
                                             Text(
-                                                "수업 " + lessonCount,
+                                                if (eventCount > 0) "수업 " + lessonCount + " · 일정 " + eventCount
+                                                else "수업 " + lessonCount,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         } else if (eventCount > 0) {
                                             Text(
@@ -3009,6 +3011,30 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
         }
 
         Spacer(Modifier.height(10.dp))
+
+        if (state.calendarTimetableError.isNotBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "수업을 불러오지 못했습니다.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    TextButton(onClick = { vm.loadCalendarTimetableMonth(visibleMonth) }) {
+                        Text("다시 시도")
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),

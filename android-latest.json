@@ -1,7 +1,7 @@
 {
-  "versionCode": 69,
-  "versionName": "0.3.63",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.63/MilseongJeil-v0.3.63.apk",
-  "sha256": "8862b639fdf34c2577074fe00c51547217012a3d835f3177d707d02feb0c0f59",
-  "notes": "v0.3.63: 캘린더에 교사 개인 수업을 날짜별로 표시합니다. 월간 달력에 수업 수를 표시하고 날짜를 선택하면 교시·과목·시간·학급·교실을 확인할 수 있습니다. 개인 일정과 공휴일 표시는 유지하며 월 이동 시 수업을 자동 갱신합니다."
+  "versionCode": 70,
+  "versionName": "0.3.64",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.64/MilseongJeil-v0.3.64.apk",
+  "sha256": "0fab1c8d806c74ef98236fbcb223ca728e7d68cf1b476cc3ee1efa05a911466d",
+  "notes": "v0.3.64: 빈 메모 페이지에서도 본문 입력창이 확실히 표시되도록 수정했습니다. 서버에서 빈 블록으로 내려오는 페이지는 로드 완료 후 편집 가능한 텍스트 블록을 제공하고, 마지막 블록 삭제 후에도 입력창이 사라지지 않도록 했습니다. 기존 메모 데이터의 조기 덮어쓰기 위험도 차단했습니다."
 }

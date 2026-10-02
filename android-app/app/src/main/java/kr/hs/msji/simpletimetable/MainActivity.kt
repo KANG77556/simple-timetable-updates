@@ -180,6 +180,7 @@ fun SimpleTimetableApp(
     LaunchedEffect(state.loggedIn) {
         kotlinx.coroutines.delay(150)
         vm.preloadAllIfNeeded()
+        vm.preloadNotes()
         kotlinx.coroutines.delay(100)
         vm.preloadClassroomsIfNeeded()
     }

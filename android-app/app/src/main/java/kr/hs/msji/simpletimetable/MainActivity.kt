@@ -2251,6 +2251,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
     var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
+    val draftCleanupStarted = remember(selected.id) { java.util.concurrent.atomic.AtomicBoolean(false) }
 
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
@@ -2272,7 +2273,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             title.isBlank() &&
             blocks.all { it.content.isBlank() && !it.checked }
 
-        if (untouchedNewDraft) {
+        if (untouchedNewDraft && draftCleanupStarted.compareAndSet(false, true)) {
             vm.archiveNotePage(selected.id)
             newDraftPageId = null
         } else if (dirty) {
@@ -2295,7 +2296,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 latestDraftId == selected.id &&
                 latestTitle.isBlank() &&
                 latestBlocks.all { it.content.isBlank() && !it.checked }
-            if (untouchedNewDraft) {
+            if (untouchedNewDraft && draftCleanupStarted.compareAndSet(false, true)) {
                 vm.archiveNotePage(selected.id)
             }
         }

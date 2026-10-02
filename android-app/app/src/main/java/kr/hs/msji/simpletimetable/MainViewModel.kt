@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -54,14 +55,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val state: StateFlow<AppUiState> = _state
 
+    private val timetableRequests = TimetableRequests()
+
     init {
         if (_state.value.loggedIn) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val userId = _state.value.profile.userId.ifBlank { store.userId }
-                if (userId.isNotBlank()) {
-                    runTask { refreshTodayDirect(userId) }
-                }
-            }
+            val userId = _state.value.profile.userId.ifBlank { store.userId }
+            if (userId.isNotBlank()) startTimetableRefresh(LocalDate.now().toString(), userId)
         }
     }
 
@@ -72,14 +71,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             store.displayName = profile.displayName
             store.loginId = loginId.trim()
             _state.value = _state.value.copy(loggedIn = true, profile = profile)
-            refreshTodayDirect(profile.userId)
+            val request = beginTimetableRequest(LocalDate.now().toString())
+            executeTimetableRequest(request, profile.userId)
         }
     }
 
-    fun refreshToday() = viewModelScope.launch(Dispatchers.IO) {
+    fun refreshToday() {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isBlank()) return@launch
-        runTask { refreshDateDirect(_state.value.today, userId) }
+        if (userId.isNotBlank()) startTimetableRefresh(_state.value.today, userId)
     }
 
     fun moveDate(days: Long) {
@@ -95,32 +94,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadDate(date)
     }
 
-    private fun loadDate(date: LocalDate) = viewModelScope.launch(Dispatchers.IO) {
+    private fun loadDate(date: LocalDate) {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isBlank()) return@launch
-        runTask { refreshDateDirect(date.toString(), userId) }
+        if (userId.isNotBlank()) startTimetableRefresh(date.toString(), userId)
     }
 
-    private fun refreshTodayDirect(userId: String) {
-        refreshDateDirect(LocalDate.now().toString(), userId)
+    // Reserve synchronously before launching: even rapid next/previous taps supersede startup.
+    private fun beginTimetableRequest(date: String) = timetableRequests.begin(date) {
+        _state.update { current ->
+            current.copy(
+                today = date,
+                myTimetable = if (current.today == date) current.myTimetable else emptyList(),
+                loading = true,
+                message = ""
+            )
+        }
     }
 
-    private fun refreshDateDirect(date: String, userId: String) {
-        val before = _state.value.myTimetable
-        val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
-        val rows = api.fetchMyTimetable(date, userId, displayName)
-        val isActualToday = date == LocalDate.now().toString()
-
-        if (isActualToday) {
-            val changed = before.isNotEmpty() && before != rows
-            store.latestTimetableJson = encodeTimetable(rows)
-            TimetableWidget.updateAll(getApplication())
-            if (changed) {
-                NotificationHelper.showTimetableChanged(getApplication())
+    private fun startTimetableRefresh(date: String, userId: String) {
+        val request = beginTimetableRequest(date)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                executeTimetableRequest(request, userId)
+            } catch (e: Exception) {
+                timetableRequests.applyIfCurrent(request) { handleTaskError(e) }
+            } finally {
+                timetableRequests.applyIfCurrent(request) {
+                    _state.update { it.copy(loading = false) }
+                }
             }
         }
+    }
 
-        _state.value = _state.value.copy(today = date, myTimetable = rows)
+    private fun executeTimetableRequest(request: TimetableRequests.Request, userId: String) {
+        // The persisted today's cache is the comparison baseline, not a navigated day's rows.
+        val before = decodeTimetable(store.latestTimetableJson)
+        val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
+        val rows = api.fetchMyTimetable(request.date, userId, displayName)
+        timetableRequests.applyIfCurrent(request) {
+            if (request.date == LocalDate.now().toString()) {
+                val changed = timetableChangedForDate(request.date, before, rows)
+                store.latestTimetableJson = encodeTimetable(rows)
+                TimetableWidget.updateAll(getApplication())
+                if (changed) NotificationHelper.showTimetableChanged(getApplication())
+            }
+            _state.update { it.copy(today = request.date, myTimetable = rows) }
+        }
     }
 
     fun preloadAllIfNeeded() {
@@ -501,6 +520,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             block()
         } catch (e: Exception) {
+            handleTaskError(e)
+        } finally {
+            _state.value = _state.value.copy(loading = false)
+        }
+    }
+
+    private fun handleTaskError(e: Exception) {
             val apiError = e as? ScerpApiException
             if (apiError?.code == "authentication_required") {
                 store.clearSession()
@@ -514,9 +540,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     message = apiError?.message ?: e.message ?: "오류가 발생했습니다."
                 )
             }
-        } finally {
-            _state.value = _state.value.copy(loading = false)
-        }
     }
 
     companion object {

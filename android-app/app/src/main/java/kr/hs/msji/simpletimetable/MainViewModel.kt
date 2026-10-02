@@ -307,7 +307,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
         runTask {
-            val page = api.fetchNote(id)
+            val fetched = api.fetchNote(id)
+            val page = if (fetched.blocks.isEmpty()) {
+                fetched.copy(
+                    blocks = listOf(
+                        NoteBlock(
+                            id = java.util.UUID.randomUUID().toString(),
+                            type = NoteBlockType.TEXT,
+                            position = 0
+                        )
+                    )
+                )
+            } else {
+                fetched
+            }
             val list = _state.value.notePages.filterNot { it.id == id } + page
             store.saveNotePages(list)
             _state.value = _state.value.copy(

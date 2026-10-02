@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -836,7 +835,7 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp),
+                    .heightIn(min = 48.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = androidx.compose.foundation.BorderStroke(
@@ -2010,7 +2009,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        Icons.Filled.Description,
+                        Icons.Filled.List,
                         contentDescription = null,
                         modifier = Modifier.size(34.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
@@ -2057,7 +2056,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 7.dp)
                         ) {
                             Icon(
-                                Icons.Filled.Description,
+                                Icons.Filled.List,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(20.dp)

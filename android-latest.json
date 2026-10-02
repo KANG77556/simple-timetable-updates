@@ -1,7 +1,7 @@
 {
-  "versionCode": 65,
-  "versionName": "0.3.59",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.59/MilseongJeil-v0.3.59.apk",
-  "sha256": "d4bd0a2d6dfff542e60883440deca2b7c12f9c75fe2e195c1b834c37ab126797",
-  "notes": "v0.3.59: TODO 화면을 더 간결하게 정리했습니다. 입력 영역과 여백을 줄이고 진행/완료 목록을 문서형 행으로 바꾸었으며, 일정 보내기와 삭제 기능을 유지했습니다. 긴 할 일 내용도 잘리지 않고 전체 표시됩니다."
+  "versionCode": 67,
+  "versionName": "0.3.61",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.61/MilseongJeil-v0.3.61.apk",
+  "sha256": "459ea4333c6274f737aa0a8e157c92f35a6331f3c8e38fd0e3015c25371557c4",
+  "notes": "v0.3.61: 오늘 화면의 고정 메모 개수가 실제 메모 페이지와 다르게 표시되는 문제를 수정했습니다. 실제 고정된 활성 페이지 기준으로 집계하고 앱 시작 시 서버 상태를 안전하게 반영합니다. 계정별 메모 캐시를 분리해 다른 계정의 메모가 섞이지 않도록 했습니다."
 }

@@ -223,7 +223,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val page = api.fetchNote(id)
             val list = _state.value.notePages.filterNot { it.id == id } + page
             store.saveNotePages(list)
-            _state.value = _state.value.copy(notePages = list)
+            _state.value = _state.value.copy(
+                notePages = list,
+                pinnedNoteCount = list.count { it.pinned && !it.archived }
+            )
         }
     }
 

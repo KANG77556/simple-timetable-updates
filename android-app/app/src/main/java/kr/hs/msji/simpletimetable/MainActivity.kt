@@ -796,8 +796,15 @@ private fun TodayScreen(
     val status = remember(state.myTimetable, state.today) {
         if (isToday) TimetableStatus.calculate(state.myTimetable) else ClassStatus()
     }
-    val dateLabel = remember(selectedDate) {
-        selectedDate.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN))
+    val configuration = LocalConfiguration.current
+    val compactDateLabel = configuration.screenWidthDp < 380 || configuration.fontScale >= 1.15f
+    val dateLabel = remember(selectedDate, compactDateLabel) {
+        selectedDate.format(
+            DateTimeFormatter.ofPattern(
+                if (compactDateLabel) "yyyy. M. d. (E)" else "yyyy년 M월 d일 (E)",
+                Locale.KOREAN
+            )
+        )
     }
     val context = LocalContext.current
     val openDatePicker = {
@@ -867,21 +874,26 @@ private fun TodayScreen(
                 )
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = if (compactDateLabel) 8.dp else 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        Icons.Filled.DateRange,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    if (!compactDateLabel) {
+                        Icon(
+                            Icons.Filled.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
                         dateLabel,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
                     )
                 }
             }

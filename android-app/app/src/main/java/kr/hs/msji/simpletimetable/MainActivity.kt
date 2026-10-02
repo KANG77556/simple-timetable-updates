@@ -1820,8 +1820,20 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
     }
 }
 
+internal fun completeMemoSaveUi(
+    resetEditor: () -> Unit,
+    clearFocus: () -> Unit,
+    hideKeyboard: () -> Unit
+) {
+    resetEditor()
+    clearFocus()
+    hideKeyboard()
+}
+
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     val selected = state.notePages.firstOrNull { it.id == selectedId }
@@ -2082,9 +2094,15 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     DropdownMenuItem(
                         text = { Text("지금 저장") },
                         onClick = {
-                            topMenuExpanded = false
-                            dirty = false
                             savePage()
+                            completeMemoSaveUi(
+                                resetEditor = {
+                                    topMenuExpanded = false
+                                    dirty = false
+                                },
+                                clearFocus = { focusManager.clearFocus(force = true) },
+                                hideKeyboard = { keyboardController?.hide() }
+                            )
                         }
                     )
                     DropdownMenuItem(

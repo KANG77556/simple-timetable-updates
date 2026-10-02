@@ -30,6 +30,7 @@ class PinnedMemoWidget : AppWidgetProvider() {
                 .maxByOrNull { it.updatedAt }
 
             val views = RemoteViews(context.packageName, R.layout.pinned_memo_widget)
+            views.setTextViewTextSize(R.id.memo_widget_heading, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
             views.setTextViewTextSize(R.id.memo_widget_title, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 17f))
             views.setTextViewTextSize(R.id.memo_widget_text, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 13f))
             views.setTextViewTextSize(R.id.memo_widget_meta, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))

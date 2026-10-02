@@ -25,7 +25,9 @@ object WidgetDisplaySettings {
             .apply()
     }
 
-    fun scaled(context: Context, baseSp: Float): Float = baseSp * fontScale(context)
+    internal fun scaled(baseSp: Float, scale: Float): Float = baseSp * scale.coerceIn(0.85f, 1.30f)
+
+    fun scaled(context: Context, baseSp: Float): Float = scaled(baseSp, fontScale(context))
 
     fun refreshAllWidgets(context: Context) {
         TimetableWidget.updateAll(context)

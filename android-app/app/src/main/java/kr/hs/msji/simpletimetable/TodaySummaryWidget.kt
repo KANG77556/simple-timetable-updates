@@ -29,6 +29,10 @@ class TodaySummaryWidget : AppWidgetProvider() {
             val memoCount = store.loadMemos().count { it.pinned && it.deletedAt == 0L && !it.archived }
 
             val views = RemoteViews(context.packageName, R.layout.today_summary_widget)
+            views.setTextViewTextSize(R.id.summary_heading, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 16f))
+            views.setTextViewTextSize(R.id.summary_todo_label, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
+            views.setTextViewTextSize(R.id.summary_event_label, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
+            views.setTextViewTextSize(R.id.summary_memo_label, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
             views.setTextViewTextSize(R.id.summary_todo_count, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 26f))
             views.setTextViewTextSize(R.id.summary_event_count, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 26f))
             views.setTextViewTextSize(R.id.summary_memo_count, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 26f))

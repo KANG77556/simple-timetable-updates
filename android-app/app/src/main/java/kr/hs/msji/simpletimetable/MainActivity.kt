@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -2265,6 +2266,26 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         )
     }
 
+    fun exitMemoEditor() {
+        val untouchedNewDraft =
+            newDraftPageId == selected.id &&
+            title.isBlank() &&
+            blocks.all { it.content.isBlank() && !it.checked }
+
+        if (untouchedNewDraft) {
+            vm.archiveNotePage(selected.id)
+            newDraftPageId = null
+        } else if (dirty) {
+            dirty = false
+            savePage()
+        }
+        selectedId = null
+    }
+
+    BackHandler(enabled = selectedId != null) {
+        exitMemoEditor()
+    }
+
     fun addOrTransformBlock(type: NoteBlockType) {
         val target = slashTargetId
         if (target != null) {
@@ -2290,21 +2311,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(
-                onClick = {
-                    val untouchedNewDraft =
-                        newDraftPageId == selected.id &&
-                        title.isBlank() &&
-                        blocks.all { it.content.isBlank() && !it.checked }
-
-                    if (untouchedNewDraft) {
-                        vm.archiveNotePage(selected.id)
-                        newDraftPageId = null
-                    } else if (dirty) {
-                        dirty = false
-                        savePage()
-                    }
-                    selectedId = null
-                },
+                onClick = { exitMemoEditor() },
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
             ) { Text("‹  메모") }
 

@@ -2819,7 +2819,15 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
         state.calendar.groupBy { it.date }
     }
     val selectedEvents = eventsByDate[selectedDate.toString()].orEmpty().sortedBy { it.title }
+    val timetableByDate = remember(state.calendarTimetable) {
+        state.calendarTimetable.groupBy { it.date }
+    }
+    val selectedLessons = timetableByDate[selectedDate.toString()].orEmpty().sortedBy { it.period }
     val holidayName = KoreanHolidays.name(selectedDate)
+
+    LaunchedEffect(visibleMonth, state.loggedIn) {
+        if (state.loggedIn) vm.loadCalendarTimetableMonth(visibleMonth)
+    }
     val monthFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREA) }
     val fullDateFormatter = remember { DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREA) }
 
@@ -2939,6 +2947,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                                 val selected = date == selectedDate
                                 val isToday = date == today
                                 val eventCount = eventsByDate[date.toString()].orEmpty().size
+                                val lessonCount = timetableByDate[date.toString()].orEmpty().size
 
                                 Surface(
                                     modifier = Modifier
@@ -2974,6 +2983,13 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                                                 color = MaterialTheme.colorScheme.error,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
+                                            )
+                                        } else if (lessonCount > 0) {
+                                            Text(
+                                                "수업 " + lessonCount,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                maxLines = 1
                                             )
                                         } else if (eventCount > 0) {
                                             Text(
@@ -3013,10 +3029,13 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                     )
                 }
             }
-            if (selectedEvents.isNotEmpty()) {
+            if (selectedLessons.isNotEmpty() || selectedEvents.isNotEmpty()) {
                 Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        selectedEvents.size.toString() + "개 일정",
+                        listOfNotNull(
+                            selectedLessons.takeIf { it.isNotEmpty() }?.let { it.size.toString() + "개 수업" },
+                            selectedEvents.takeIf { it.isNotEmpty() }?.let { it.size.toString() + "개 일정" }
+                        ).joinToString(" · "),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -3025,6 +3044,61 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
         }
 
         Spacer(Modifier.height(6.dp))
+
+        if (selectedLessons.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "수업",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                selectedLessons.forEach { lesson ->
+                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(38.dp),
+                                shape = RoundedCornerShape(11.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        lesson.period.toString(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    lesson.subject.ifBlank { "수업" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                val detail = buildList {
+                                    if (lesson.startTime.isNotBlank() || lesson.endTime.isNotBlank()) {
+                                        add(listOf(lesson.startTime, lesson.endTime).filter { it.isNotBlank() }.joinToString(" ~ "))
+                                    }
+                                    if (lesson.classCode.isNotBlank()) add(lesson.classCode)
+                                    if (lesson.room.isNotBlank()) add(lesson.room)
+                                }.joinToString(" · ")
+                                if (detail.isNotBlank()) {
+                                    Text(
+                                        detail,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
 
         if (selectedEvents.isEmpty()) {
             Surface(
@@ -3037,7 +3111,11 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        if (holidayName != null) holidayName else "등록된 일정이 없습니다.",
+                        when {
+                            holidayName != null -> holidayName
+                            selectedLessons.isNotEmpty() -> "등록된 개인 일정이 없습니다."
+                            else -> "등록된 일정이 없습니다."
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = if (holidayName != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface

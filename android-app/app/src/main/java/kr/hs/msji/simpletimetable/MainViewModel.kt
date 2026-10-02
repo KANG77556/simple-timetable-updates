@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,47 +73,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val state: StateFlow<AppUiState> = _state
 
+    private val timetableRequests = TimetableRequests()
+
     init {
         if (_state.value.loggedIn) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val userId = _state.value.profile.userId.ifBlank { store.userId }
-                if (userId.isNotBlank()) {
-                    runTask { refreshTodayDirect(userId) }
-                }
-            }
+            val userId = _state.value.profile.userId.ifBlank { store.userId }
+            if (userId.isNotBlank()) startTimetableRefresh(LocalDate.now().toString(), userId)
         }
     }
 
-    fun login(loginId: String, password: String) = viewModelScope.launch(Dispatchers.IO) {
-        runTask {
+    fun login(loginId: String, password: String): Job {
+        val request = beginTimetableRequest(LocalDate.now().toString())
+        return launchTimetableRequest(request) {
             val previousUserId = store.userId
-            val profile = api.login(loginId, password)
-            store.switchNoteAccount(previousUserId, profile.userId)
-            store.userId = profile.userId
-            store.displayName = profile.displayName
-            store.loginId = loginId.trim()
-            val accountNotes = store.loadNotePages()
-            calendarTimetableRequestKey = ""
-            calendarTimetableJob?.cancel()
-            calendarTimetableJob = null
-            _state.value = _state.value.copy(
-                loggedIn = true,
-                profile = profile,
-                notePages = accountNotes,
-                pinnedNoteCount = null,
-                calendarTimetable = emptyList(),
-                calendarTimetableMonth = "",
-                calendarTimetableUserId = "",
-                calendarTimetableError = ""
-            )
-            refreshTodayDirect(profile.userId)
+            val profile = timetableApi(request).login(loginId, password)
+            // Publish the account only while this login still owns the request generation.
+            if (!timetableRequests.applyIfCurrent(request) {
+                store.switchNoteAccount(previousUserId, profile.userId)
+                store.userId = profile.userId
+                store.displayName = profile.displayName
+                store.loginId = loginId.trim()
+                val accountNotes = store.loadNotePages()
+                calendarTimetableRequestKey = ""
+                calendarTimetableJob?.cancel()
+                calendarTimetableJob = null
+                _state.update { it.copy(
+                    loggedIn = true,
+                    profile = profile,
+                    notePages = accountNotes,
+                    pinnedNoteCount = null,
+                    calendarTimetable = emptyList(),
+                    calendarTimetableMonth = "",
+                    calendarTimetableUserId = "",
+                    calendarTimetableError = ""
+                ) }
+            }) return@launchTimetableRequest
+            executeTimetableRequest(request, profile.userId)
         }
     }
 
-    fun refreshToday() = viewModelScope.launch(Dispatchers.IO) {
+    fun refreshToday() {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isBlank()) return@launch
-        runTask { refreshDateDirect(_state.value.today, userId) }
+        if (userId.isNotBlank()) startTimetableRefresh(_state.value.today, userId)
     }
 
     fun moveDate(days: Long) {
@@ -128,32 +130,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadDate(date)
     }
 
-    private fun loadDate(date: LocalDate) = viewModelScope.launch(Dispatchers.IO) {
+    private fun loadDate(date: LocalDate) {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isBlank()) return@launch
-        runTask { refreshDateDirect(date.toString(), userId) }
+        if (userId.isNotBlank()) startTimetableRefresh(date.toString(), userId)
     }
 
-    private fun refreshTodayDirect(userId: String) {
-        refreshDateDirect(LocalDate.now().toString(), userId)
+    // Reserve before launching IO so rapid taps and login publication cannot reorder ownership.
+    private fun beginTimetableRequest(date: String) = timetableRequests.begin(date) {
+        _state.update { current ->
+            current.copy(
+                today = date,
+                myTimetable = if (current.today == date) current.myTimetable else emptyList(),
+                loading = true,
+                message = ""
+            )
+        }
     }
 
-    private fun refreshDateDirect(date: String, userId: String) {
-        val before = _state.value.myTimetable
-        val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
-        val rows = api.fetchMyTimetable(date, userId, displayName)
-        val isActualToday = date == LocalDate.now().toString()
-
-        if (isActualToday) {
-            val changed = before.isNotEmpty() && before != rows
-            store.latestTimetableJson = encodeTimetable(rows)
-            TimetableWidget.updateAll(getApplication())
-            if (changed) {
-                NotificationHelper.showTimetableChanged(getApplication())
-            }
+    private fun launchTimetableRequest(request: TimetableRequests.Request, block: () -> Unit): Job =
+        viewModelScope.launch(Dispatchers.IO) {
+            timetableRequests.execute(
+                request,
+                block = block,
+                onError = ::handleTaskError,
+                onFinished = { _state.update { it.copy(loading = false) } }
+            )
         }
 
-        _state.value = _state.value.copy(today = date, myTimetable = rows)
+    private fun startTimetableRefresh(date: String, userId: String): Job {
+        val request = beginTimetableRequest(date)
+        return launchTimetableRequest(request) { executeTimetableRequest(request, userId) }
+    }
+
+    // HTTP Set-Cookie is also a session write; stale responses must not replace it.
+    private fun timetableApi(request: TimetableRequests.Request) = ScerpApi(store) { update ->
+        timetableRequests.applyIfCurrent(request, update)
+    }
+
+    private fun executeTimetableRequest(request: TimetableRequests.Request, userId: String) {
+        // Compare today's persisted cache, never rows from a different selected date.
+        val before = decodeTimetable(store.latestTimetableJson)
+        val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
+        val rows = timetableApi(request).fetchMyTimetable(request.date, userId, displayName)
+        timetableRequests.applyIfCurrent(request) {
+            if (request.date == LocalDate.now().toString()) {
+                val changed = timetableChangedForDate(request.date, before, rows)
+                store.latestTimetableJson = encodeTimetable(rows)
+                TimetableWidget.updateAll(getApplication())
+                if (changed) NotificationHelper.showTimetableChanged(getApplication())
+            }
+            _state.update { it.copy(today = request.date, myTimetable = rows) }
+        }
     }
 
     fun preloadAllIfNeeded() {
@@ -715,28 +742,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             block()
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            val apiError = e as? ScerpApiException
-            if (apiError?.code == "authentication_required") {
-                store.clearSession()
-                calendarTimetableRequestKey = ""
-                calendarTimetableJob?.cancel()
-                calendarTimetableJob = null
-                _state.value = _state.value.copy(
-                    loggedIn = false,
-                    classrooms = emptyList(),
-                    calendarTimetable = emptyList(),
-                    calendarTimetableMonth = "",
-                    calendarTimetableUserId = "",
-                    message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
-                )
-            } else {
-                _state.value = _state.value.copy(
-                    message = apiError?.message ?: e.message ?: "오류가 발생했습니다."
-                )
-            }
+            handleTaskError(e)
         } finally {
             _state.value = _state.value.copy(loading = false)
+        }
+    }
+
+    private fun handleTaskError(e: Exception) {
+        if (e is CancellationException) throw e
+        val apiError = e as? ScerpApiException
+        if (apiError?.code == "authentication_required") {
+            store.clearSession()
+            calendarTimetableRequestKey = ""
+            calendarTimetableJob?.cancel()
+            calendarTimetableJob = null
+            _state.value = _state.value.copy(
+                loggedIn = false,
+                classrooms = emptyList(),
+                calendarTimetable = emptyList(),
+                calendarTimetableMonth = "",
+                calendarTimetableUserId = "",
+                message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
+            )
+        } else {
+            _state.value = _state.value.copy(
+                message = apiError?.message ?: e.message ?: "오류가 발생했습니다."
+            )
         }
     }
 

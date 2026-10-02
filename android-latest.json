@@ -1,7 +1,7 @@
 {
-  "versionCode": 61,
-  "versionName": "0.3.55",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.55/MilseongJeil-v0.3.55.apk",
-  "sha256": "76d9b2fa6d631a608d660b941a19043e7af0f3d11dd6210cdd91d8f7f3aaaaa5",
-  "notes": "v0.3.55: 메모 편집기를 Notion에 더 가까운 페이지·블록 중심 UI로 개선했습니다. 페이지 목록, 큰 제목, 속성, / 명령, 텍스트·제목·체크리스트·목록·인용·코드·링크·이미지·파일·구분선 블록, 자동 저장, TODO·캘린더 보내기 기능을 지원합니다."
+  "versionCode": 62,
+  "versionName": "0.3.56",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.56/MilseongJeil-v0.3.56.apk",
+  "sha256": "473ed507e87d825d292a70686e7afb696fa3d8026e4c9b8a1e84116778379795",
+  "notes": "v0.3.56: 메모 입력 중 키보드가 편집 영역을 가리는 문제를 수정했습니다. 키보드 표시 시 속성 영역을 자동 축소하고, 블록 추가 컨트롤을 스크롤 영역으로 이동했으며, / 명령 팝업은 항상 동작하도록 수정했습니다."
 }

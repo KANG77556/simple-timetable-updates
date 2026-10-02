@@ -26,6 +26,7 @@ data class AppUiState(
     val calendar: List<CalendarItem> = emptyList(),
     val calendarTimetable: List<TimetableItem> = emptyList(),
     val calendarTimetableMonth: String = "",
+    val calendarTimetableUserId: String = "",
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
     val message: String = ""
@@ -35,6 +36,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
     private val api = ScerpApi(store)
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
+    @Volatile private var calendarTimetableRequestKey: String = ""
     private val initialNotePages = run {
         store.ensureNoteAccount(store.userId)
         store.loadNotePages()
@@ -82,11 +84,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             store.displayName = profile.displayName
             store.loginId = loginId.trim()
             val accountNotes = store.loadNotePages()
+            calendarTimetableRequestKey = ""
             _state.value = _state.value.copy(
                 loggedIn = true,
                 profile = profile,
                 notePages = accountNotes,
-                pinnedNoteCount = null
+                pinnedNoteCount = null,
+                calendarTimetable = emptyList(),
+                calendarTimetableMonth = "",
+                calendarTimetableUserId = ""
             )
             refreshTodayDirect(profile.userId)
         }
@@ -148,28 +154,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadCalendarTimetableMonth(month: YearMonth) {
         if (!_state.value.loggedIn) return
+        val userId = _state.value.profile.userId.ifBlank { store.userId }
+        if (userId.isBlank()) return
         val monthKey = month.toString()
-        if (_state.value.calendarTimetableMonth == monthKey && _state.value.calendarTimetable.isNotEmpty()) return
+        if (
+            _state.value.calendarTimetableMonth == monthKey &&
+            _state.value.calendarTimetableUserId == userId
+        ) return
+
+        val requestKey = userId + "|" + monthKey
+        calendarTimetableRequestKey = requestKey
+
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                val userId = _state.value.profile.userId.ifBlank { store.userId }
-                if (userId.isBlank()) return@runCatching
+            runTask {
                 val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
                 val rows = (1..month.lengthOfMonth())
                     .map { month.atDay(it) }
                     .filter { it.dayOfWeek.value in 1..5 }
                     .flatMap { date ->
-                        runCatching {
-                            api.fetchMyTimetable(date.toString(), userId, displayName)
-                        }.getOrDefault(emptyList())
+                        api.fetchMyTimetable(date.toString(), userId, displayName)
                     }
                     .filter { it.subject.isNotBlank() || it.room.isNotBlank() || it.startTime.isNotBlank() }
                     .distinctBy { "${it.date}-${it.period}-${it.subject}-${it.room}" }
                     .sortedWith(compareBy<TimetableItem>({ it.date }, { it.period }))
-                _state.value = _state.value.copy(
-                    calendarTimetable = rows,
-                    calendarTimetableMonth = monthKey
-                )
+
+                if (calendarTimetableRequestKey == requestKey) {
+                    _state.value = _state.value.copy(
+                        calendarTimetable = rows,
+                        calendarTimetableMonth = monthKey,
+                        calendarTimetableUserId = userId
+                    )
+                }
             }
         }
     }
@@ -595,9 +610,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val apiError = e as? ScerpApiException
             if (apiError?.code == "authentication_required") {
                 store.clearSession()
+                calendarTimetableRequestKey = ""
                 _state.value = _state.value.copy(
                     loggedIn = false,
                     classrooms = emptyList(),
+                    calendarTimetable = emptyList(),
+                    calendarTimetableMonth = "",
+                    calendarTimetableUserId = "",
                     message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
                 )
             } else {

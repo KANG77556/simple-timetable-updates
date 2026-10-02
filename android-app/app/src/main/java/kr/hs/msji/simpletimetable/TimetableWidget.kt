@@ -1,11 +1,13 @@
 package kr.hs.msji.simpletimetable
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -74,20 +76,21 @@ class TimetableWidget : AppWidgetProvider() {
                 else -> "오늘 수업 종료"
             }
             val detail = when {
-                current != null -> {
-                    val end = parseTime(current.endTime)
-                    val remain = end?.let { Duration.between(now, it).toMinutes().coerceAtLeast(0) } ?: 0
-                    val room = current.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
-                    "${remain}분 남음 · $room"
-                }
-                next != null -> {
-                    val start = parseTime(next.startTime)
-                    val remain = start?.let { Duration.between(now, it).toMinutes().coerceAtLeast(0) } ?: 0
-                    val room = next.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
-                    "${remain}분 후 시작 · $room"
-                }
+                current != null -> current.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
+                next != null -> next.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
                 rows.isEmpty() -> "등록된 수업이 없습니다."
                 else -> "오늘 일정이 모두 끝났습니다."
+            }
+
+            val countdownTarget = when {
+                current != null -> parseTime(current.endTime)
+                next != null -> parseTime(next.startTime)
+                else -> null
+            }
+            val countdownFormat = when {
+                current != null -> "수업 종료까지 %s"
+                next != null -> "수업 시작까지 %s"
+                else -> null
             }
 
             val visibleRows = when {
@@ -116,11 +119,21 @@ class TimetableWidget : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
             views.setTextViewTextSize(R.id.widget_refresh, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 22f))
             views.setTextViewTextSize(R.id.widget_status, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 18f))
-            views.setTextViewTextSize(R.id.widget_detail, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
+            views.setTextViewTextSize(R.id.widget_countdown, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
+            views.setTextViewTextSize(R.id.widget_detail, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
             views.setTextViewTextSize(R.id.widget_rows, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
             views.setTextViewTextSize(R.id.widget_summary, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 11f))
             views.setTextViewTextSize(R.id.widget_open, android.util.TypedValue.COMPLEX_UNIT_SP, WidgetDisplaySettings.scaled(context, 12f))
             views.setTextViewText(R.id.widget_status, status)
+            if (countdownTarget != null && countdownFormat != null) {
+                val remainingMillis = Duration.between(now, countdownTarget).toMillis().coerceAtLeast(0L)
+                val base = SystemClock.elapsedRealtime() + remainingMillis
+                views.setChronometer(R.id.widget_countdown, base, countdownFormat, true)
+                views.setChronometerCountDown(R.id.widget_countdown, true)
+                views.setViewVisibility(R.id.widget_countdown, View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_countdown, View.GONE)
+            }
             views.setTextViewText(R.id.widget_detail, detail)
             views.setTextViewText(R.id.widget_rows, if (timetableText.isBlank()) "등록된 수업이 없습니다." else timetableText)
             views.setTextViewText(R.id.widget_summary, if (summary.isBlank()) "할 일·일정 없음" else summary)
@@ -143,6 +156,29 @@ class TimetableWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_refresh, refreshPending)
 
             manager.updateAppWidget(appWidgetId, views)
+            scheduleNextTransition(context, rows, now)
+        }
+
+        private fun scheduleNextTransition(context: Context, rows: List<TimetableItem>, now: LocalTime) {
+            val nextBoundary = rows
+                .flatMap { row -> listOfNotNull(parseTime(row.startTime), parseTime(row.endTime)) }
+                .filter { it.isAfter(now) }
+                .minOrNull()
+                ?: return
+
+            val seconds = Duration.between(now, nextBoundary).seconds.coerceAtLeast(1L)
+            val triggerAt = System.currentTimeMillis() + (seconds * 1000L) + 1000L
+            val intent = Intent(context, TimetableWidget::class.java).apply {
+                action = ACTION_REFRESH_WIDGET
+            }
+            val pending = PendingIntent.getBroadcast(
+                context,
+                9001,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
         }
 
         private fun formatDurationMinutes(totalMinutes: Long): String {

@@ -172,6 +172,13 @@ fun SimpleTimetableApp(
         return
     }
 
+    LaunchedEffect(state.loggedIn) {
+        kotlinx.coroutines.delay(150)
+        vm.preloadAllIfNeeded()
+        kotlinx.coroutines.delay(100)
+        vm.preloadClassroomsIfNeeded()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -227,8 +234,6 @@ fun SimpleTimetableApp(
                             globalSearch = false
                             showSettings = false
                             tab = item
-                            if (item == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
-                            if (item == AppTab.BROADCAST && state.classrooms.isEmpty()) vm.loadClassrooms()
                         },
                         icon = { AppTabIcon(item) },
                         label = { Text(item.label) }
@@ -249,7 +254,6 @@ fun SimpleTimetableApp(
                     onOpen = { target ->
                         globalSearch = false
                         tab = target
-                        if (target == AppTab.ALL && state.allTimetable.isEmpty()) vm.refreshAll()
                     }
                 )
             } else {
@@ -1828,767 +1832,600 @@ internal fun completeMemoSaveUi(
 
 @Composable
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val memoScrollState = rememberScrollState()
-    val imeVisible = WindowInsets.ime.getBottom(density) > 0
-    var text by remember { mutableStateOf(vm.memoDraftText()) }
-    var title by remember { mutableStateOf(vm.memoDraftTitle()) }
+    var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
-    var editingId by remember { mutableStateOf<Long?>(null) }
-    var category by remember { mutableStateOf(vm.memoDraftCategory()) }
-    var checklist by remember { mutableStateOf(vm.memoDraftChecklist()) }
-    var priority by remember { mutableIntStateOf(vm.memoDraftPriority()) }
-    var sortMode by remember { mutableStateOf("고정순") }
-    var templateMenu by remember { mutableStateOf(false) }
-    var viewMode by remember { mutableStateOf("메모") }
-    var pendingAttachments by remember { mutableStateOf<List<String>>(emptyList()) }
-    var reminderMemoId by remember { mutableStateOf<Long?>(null) }
-    var backupMessage by remember { mutableStateOf("") }
-
-    val attachmentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
-        if (uris.isNotEmpty()) {
-            uris.forEach { uri ->
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                }
-            }
-            pendingAttachments = (pendingAttachments + uris.map { it.toString() }).distinct()
-        }
-    }
-
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                .orEmpty()
-            if (spoken.isNotBlank()) {
-                text = listOf(text.trim(), spoken.trim()).filter { it.isNotBlank() }.joinToString("\n")
-                vm.saveMemoDraft(text, category, checklist, title, priority)
-            }
-        }
-    }
-
-    val backupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            backupMessage = runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(vm.exportMemosJson().toByteArray(Charsets.UTF_8))
-                } ?: error("백업 파일을 열 수 없습니다.")
-                "메모 백업을 저장했습니다."
-            }.getOrElse { "메모 백업 저장에 실패했습니다." }
-        }
-    }
-
-    val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            backupMessage = runCatching {
-                val raw = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-                    ?: error("백업 파일을 읽을 수 없습니다.")
-                if (vm.importMemosJson(raw)) "메모 백업을 복원했습니다." else "올바른 메모 백업 파일이 아닙니다."
-            }.getOrElse { "메모 백업 복원에 실패했습니다." }
-        }
-    }
+    val selected = state.notePages.firstOrNull { it.id == selectedId }
 
     LaunchedEffect(Unit) {
-        vm.cleanupExpiredTrash()
+        if (state.loggedIn) vm.refreshNotes()
     }
 
+    if (selectedId == null) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("페이지", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "PC · 웹 · Android에서 같은 메모를 사용합니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = { vm.refreshNotes() }, enabled = state.loggedIn) { Text("동기화") }
+                FilledTonalButton(
+                    enabled = !state.loading,
+                    onClick = {
+                    val now = java.time.Instant.now().toString()
+                    val page = NotePage(
+                        id = java.util.UUID.randomUUID().toString(),
+                        title = "새 페이지",
+                        category = "개인",
+                        version = 0,
+                        createdAt = now,
+                        updatedAt = now,
+                        blocks = listOf(
+                            NoteBlock(
+                                id = java.util.UUID.randomUUID().toString(),
+                                type = NoteBlockType.TEXT,
+                                position = 0
+                            )
+                        ),
+                        syncState = "LOCAL"
+                    )
+                    vm.saveNotePage(page)
+                    selectedId = page.id
+                }) { Text(if (state.loading) "처리 중…" else "＋ 새 페이지") }
+            }
 
-    val categories = listOf("일반", "수업", "행정", "학생", "회의", "개인")
-    val filteredMemos = remember(state.memos, query, category, sortMode, viewMode) {
-        val base = state.memos
-            .asSequence()
-            .filter {
-                when (viewMode) {
-                    "보관함" -> it.deletedAt == 0L && it.archived
-                    "휴지통" -> it.deletedAt > 0L
-                    else -> it.deletedAt == 0L && !it.archived
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("제목 · 내용 · 카테고리 검색") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            val pages = state.notePages
+                .filterNot { it.archived }
+                .filter {
+                    query.isBlank() ||
+                        it.title.contains(query.trim(), ignoreCase = true) ||
+                        it.category.contains(query.trim(), ignoreCase = true) ||
+                        it.blocks.any { b -> b.content.contains(query.trim(), ignoreCase = true) }
+                }
+                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+
+            if (pages.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            if (query.isBlank()) "새 페이지를 만들어 메모를 시작하세요." else "다른 검색어를 입력해 보세요.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp)
+                ) {
+                    items(pages, key = { it.id }) { page ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    selectedId = page.id
+                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
+                                        vm.openNotePage(page.id)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (page.pinned) {
+                                            Text("★", color = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(6.dp))
+                                        }
+                                        Text(
+                                            page.title.ifBlank { "제목 없음" },
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                                    if (preview.isNotBlank()) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            preview,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        page.category.ifBlank { "개인" } + " · " + when (page.syncState) {
+                                            "SYNCED" -> "동기화됨"
+                                            "PENDING" -> if (state.loading) "동기화 중…" else "동기화 대기"
+                                            "FAILED" -> "동기화 실패"
+                                            else -> if (state.loggedIn) "로컬" else "오프라인"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (page.syncState == "SYNCED") MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    "›",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                        }
+                    }
                 }
             }
-            .filter {
-                query.isBlank() ||
-                    it.title.contains(query.trim(), ignoreCase = true) ||
-                    it.text.contains(query.trim(), ignoreCase = true) ||
-                    it.category.contains(query.trim(), ignoreCase = true)
+        }
+        return
+    }
+
+    if (selected == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
+    var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
+    var blocks by remember(selected.id, selected.blocks) {
+        mutableStateOf(
+            selected.blocks.ifEmpty {
+                listOf(NoteBlock(java.util.UUID.randomUUID().toString(), NoteBlockType.TEXT, position = 0))
             }
-            .filter { category == "일반" || it.category == category }
-            .toList()
-        when (sortMode) {
-            "최신순" -> base.sortedByDescending { it.createdAt }
-            "수정순" -> base.sortedByDescending { it.updatedAt }
-            else -> base.sortedWith(compareByDescending<MemoItem> { it.pinned }.thenByDescending { it.updatedAt })
+        )
+    }
+    var dirty by remember(selected.id) { mutableStateOf(false) }
+    var topMenuExpanded by remember(selected.id) { mutableStateOf(false) }
+    var categoryMenuExpanded by remember(selected.id) { mutableStateOf(false) }
+    var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
+
+    fun savePage() {
+        vm.saveNotePage(
+            selected.copy(
+                title = title.trim().ifBlank { "제목 없음" },
+                category = category.trim().ifBlank { "개인" },
+                updatedAt = java.time.Instant.now().toString(),
+                blocks = blocks.mapIndexed { index, block -> block.copy(position = index) }
+            )
+        )
+    }
+
+    LaunchedEffect(dirty, title, category, blocks) {
+        if (dirty) {
+            kotlinx.coroutines.delay(700)
+            dirty = false
+            savePage()
         }
     }
-    val activeMemoCount = state.memos.count { it.deletedAt == 0L && !it.archived }
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREA) }
-    val today = schoolToday().toString()
 
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(memoScrollState)
             .imePadding()
             .padding(horizontal = 14.dp)
-            .padding(bottom = 24.dp)
+            .padding(bottom = 12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = {
+                if (dirty) {
+                    dirty = false
+                    savePage()
+                }
+                selectedId = null
+            }) { Text("‹ 목록") }
+
+            Spacer(Modifier.weight(1f))
+
+            Text(
+                when {
+                    dirty -> "저장 중…"
+                    selected.syncState == "PENDING" -> "동기화 중…"
+                    selected.syncState == "SYNCED" -> "동기화됨 ✓"
+                    !state.loggedIn -> "오프라인"
+                    else -> "로컬"
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = if (!dirty && selected.syncState == "SYNCED") MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Box {
+                TextButton(onClick = { topMenuExpanded = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
+                DropdownMenu(
+                    expanded = topMenuExpanded,
+                    onDismissRequest = { topMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("지금 저장") },
+                        onClick = {
+                            savePage()
+                            completeMemoSaveUi(
+                                resetEditor = {
+                                    topMenuExpanded = false
+                                    dirty = false
+                                },
+                                clearFocus = { focusManager.clearFocus(force = true) },
+                                hideKeyboard = { keyboardController?.hide() }
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("삭제") },
+                        onClick = {
+                            topMenuExpanded = false
+                            vm.archiveNotePage(selected.id)
+                            selectedId = null
+                        }
+                    )
+                }
+            }
+        }
+
+        TextField(
+            value = title,
+            onValueChange = {
+                title = it
+                dirty = true
+            },
+            placeholder = {
+                Text(
+                    "제목 없음",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            },
+            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "기록·첨부·음성 입력·공유까지 한 곳에서 관리하세요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-            if (imeVisible) {
-                TextButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                    }
-                ) { Text("키보드 닫기") }
-            }
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                Text(
-                    activeMemoCount.toString() + "개",
-                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            AssistChip(
-                onClick = {
-                    backupLauncher.launch("milseong_memos_" + schoolToday().toString() + ".json")
-                },
-                label = { Text("백업") }
-            )
-            AssistChip(
-                onClick = { restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                label = { Text("복원") }
-            )
-            Text(
-                "휴지통 30일 자동 정리",
-                modifier = Modifier.padding(vertical = 8.dp),
+                "속성",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.width(10.dp))
+            Box {
+                TextButton(
+                    onClick = { categoryMenuExpanded = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) { Text(category.ifBlank { "개인" }) }
+                DropdownMenu(
+                    expanded = categoryMenuExpanded,
+                    onDismissRequest = { categoryMenuExpanded = false }
+                ) {
+                    listOf("개인", "업무", "수업", "학생", "회의").forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text(item) },
+                            onClick = {
+                                category = item
+                                dirty = true
+                                categoryMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 6.dp),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+        )
 
-        if (backupMessage.isNotBlank()) {
-            Text(
-                backupMessage,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(4.dp))
-        }
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            contentPadding = PaddingValues(bottom = 72.dp)
+        ) {
+            items(blocks, key = { it.id }) { block ->
+                val index = blocks.indexOfFirst { it.id == block.id }
+                var blockMenuExpanded by remember(block.id) { mutableStateOf(false) }
 
-        if (viewMode != "휴지통") {
-            ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(12.dp)) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = Color.Transparent
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Top
                     ) {
                         Box {
-                            AssistChip(
-                                onClick = { templateMenu = true },
-                                label = { Text("템플릿") }
-                            )
-                            DropdownMenu(expanded = templateMenu, onDismissRequest = { templateMenu = false }) {
-                                listOf(
-                                    "학생상담" to "학생명:\n상담일:\n상담내용:\n조치사항:\n후속 확인일:",
-                                    "회의" to "회의명:\n일시:\n참석자:\n주요 안건:\n결정사항:\n담당자:",
-                                    "수업" to "학급:\n교시:\n수업내용:\n준비물:\n특이사항:"
-                                ).forEach { (name, value) ->
+                            TextButton(
+                                onClick = { blockMenuExpanded = true },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    "⋮⋮",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = blockMenuExpanded,
+                                onDismissRequest = { blockMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("위로 이동") },
+                                    enabled = index > 0,
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val item = m.removeAt(index)
+                                        m.add(index - 1, item)
+                                        blocks = m
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("아래로 이동") },
+                                    enabled = index >= 0 && index < blocks.lastIndex,
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val item = m.removeAt(index)
+                                        m.add(index + 1, item)
+                                        blocks = m
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("복제") },
+                                    onClick = {
+                                        val m = blocks.toMutableList()
+                                        val copy = block.copy(id = java.util.UUID.randomUUID().toString())
+                                        m.add(index + 1, copy)
+                                        blocks = m
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
+                                )
+                                if (block.content.isNotBlank()) {
                                     DropdownMenuItem(
-                                        text = { Text(name) },
+                                        text = { Text("TODO로 보내기") },
                                         onClick = {
-                                            text = value
-                                            category = if (name == "회의") "회의" else if (name == "수업") "수업" else "학생"
-                                            checklist = false
-                                            vm.saveMemoDraft(text, category, checklist, title, priority)
-                                            templateMenu = false
+                                            vm.noteBlockToTodo(block.content, schoolToday().toString())
+                                            blockMenuExpanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("캘린더로 보내기") },
+                                        onClick = {
+                                            vm.noteBlockToCalendar(block.content, schoolToday().toString())
+                                            blockMenuExpanded = false
                                         }
                                     )
                                 }
-                            }
-                        }
-                        FilterChip(
-                            selected = checklist,
-                            onClick = {
-                                checklist = !checklist
-                                vm.saveMemoDraft(text, category, checklist, title, priority)
-                            },
-                            label = { Text("체크리스트") }
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text.length.toString() + "/1000",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = {
-                            if (it.length <= 60) {
-                                title = it
-                                vm.saveMemoDraft(text, category, checklist, title, priority)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = { Text("제목 (선택)") },
-                        shape = RoundedCornerShape(15.dp)
-                    )
-
-                    Spacer(Modifier.height(7.dp))
-
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = {
-                            if (it.length <= 1000) {
-                                text = it
-                                vm.saveMemoDraft(text, category, checklist, title, priority)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = if (checklist) 4 else 3,
-                        maxLines = 7,
-                        placeholder = {
-                            Text(if (checklist) "한 줄에 하나씩 체크할 항목을 입력하세요" else "메모를 입력하세요")
-                        },
-                        shape = RoundedCornerShape(15.dp)
-                    )
-
-                    Spacer(Modifier.height(7.dp))
-
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        AssistChip(
-                            onClick = { attachmentLauncher.launch(arrayOf("*/*")) },
-                            label = { Text("파일 첨부") }
-                        )
-                        AssistChip(
-                            onClick = {
-                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
-                                    putExtra(RecognizerIntent.EXTRA_PROMPT, "메모 내용을 말씀해 주세요")
-                                }
-                                voiceLauncher.launch(intent)
-                            },
-                            label = { Text("음성 입력") }
-                        )
-                        if (pendingAttachments.isNotEmpty()) {
-                            Text(
-                                "첨부 " + pendingAttachments.size + "개",
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    if (pendingAttachments.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            pendingAttachments.forEachIndexed { index, uri ->
-                                AssistChip(
+                                DropdownMenuItem(
+                                    text = { Text("삭제") },
                                     onClick = {
-                                        pendingAttachments = pendingAttachments.filterNot { it == uri }
-                                    },
-                                    label = { Text("첨부 " + (index + 1) + " 삭제") }
+                                        blocks = blocks.filterNot { it.id == block.id }
+                                        dirty = true
+                                        blockMenuExpanded = false
+                                    }
                                 )
                             }
                         }
-                    }
 
-                    Spacer(Modifier.height(5.dp))
-
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        categories.forEach { item ->
-                            FilterChip(
-                                selected = category == item,
-                                onClick = {
-                                    category = item
-                                    vm.saveMemoDraft(text, category, checklist, title, priority)
+                        if (block.type == NoteBlockType.TODO) {
+                            Checkbox(
+                                checked = block.checked,
+                                onCheckedChange = { checked ->
+                                    blocks = blocks.map {
+                                        if (it.id == block.id) it.copy(checked = checked) else it
+                                    }
+                                    dirty = true
                                 },
-                                label = { Text(item) }
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
-                    }
 
-                    Spacer(Modifier.height(5.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "중요도",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        listOf(0 to "보통", 1 to "중요", 2 to "긴급").forEach { (value, label) ->
-                            FilterChip(
-                                selected = priority == value,
-                                onClick = {
-                                    priority = value
-                                    vm.saveMemoDraft(text, category, checklist, title, priority)
-                                },
-                                label = { Text(label) }
+                        if (block.type == NoteBlockType.DIVIDER) {
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(top = 22.dp, end = 8.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
-                        }
-                    }
-
-                    Spacer(Modifier.height(7.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (editingId != null) {
-                            TextButton(
-                                onClick = {
-                                    editingId = null
-                                    text = ""
-                                    title = ""
-                                    category = "일반"
-                                    checklist = false
-                                    priority = 0
-                                    pendingAttachments = emptyList()
-                                    vm.saveMemoDraft("", "일반", false, "", 0)
-                                }
-                            ) { Text("취소") }
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Button(
-                            enabled = text.isNotBlank(),
-                            onClick = {
-                                val id = editingId
-                                if (id == null) {
-                                    vm.addMemo(text, category, checklist, title, priority, pendingAttachments)
-                                } else {
-                                    vm.updateMemo(id, text, category, checklist, title, priority, pendingAttachments)
-                                }
-                                completeMemoSaveUi(
-                                    resetEditor = {
-                                        text = ""
-                                        title = ""
-                                        category = "일반"
-                                        checklist = false
-                                        priority = 0
-                                        pendingAttachments = emptyList()
-                                        editingId = null
-                                        vm.saveMemoDraft("", "일반", false, "", 0)
-                                    },
-                                    clearFocus = { focusManager.clearFocus() },
-                                    hideKeyboard = { keyboardController?.hide() }
-                                )
-                            },
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text(if (editingId == null) "메모 추가" else "수정 저장")
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(9.dp))
-        }
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            placeholder = { Text("제목·내용·카테고리 검색") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "메모 검색") },
-            trailingIcon = {
-                if (query.isNotBlank()) {
-                    IconButton(onClick = { query = "" }) {
-                        Icon(Icons.Filled.Close, contentDescription = "검색어 지우기")
-                    }
-                }
-            },
-            shape = RoundedCornerShape(15.dp)
-        )
-
-        Spacer(Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            listOf("메모", "보관함", "휴지통").forEach { mode ->
-                FilterChip(
-                    selected = viewMode == mode,
-                    onClick = {
-                        viewMode = mode
-                        editingId = null
-                    },
-                    label = { Text(mode) }
-                )
-            }
-            Spacer(Modifier.width(6.dp))
-            listOf("고정순", "수정순", "최신순").forEach { mode ->
-                FilterChip(
-                    selected = sortMode == mode,
-                    onClick = { sortMode = mode },
-                    label = { Text(mode) }
-                )
-            }
-        }
-
-        Spacer(Modifier.height(7.dp))
-
-        if (filteredMemos.isEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 28.dp, horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        when {
-                            query.isNotBlank() -> "검색 결과가 없습니다."
-                            viewMode == "휴지통" -> "휴지통이 비어 있습니다."
-                            viewMode == "보관함" -> "보관된 메모가 없습니다."
-                            else -> "저장된 메모가 없습니다."
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        } else {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                filteredMemos.forEach { memo ->
-                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer
-                                ) {
-                                    Text(
-                                        memo.category,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                }
-                                if (memo.pinned && memo.deletedAt == 0L) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("고정", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                }
-                                if (memo.priority > 0) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        if (memo.priority == 2) "긴급" else "중요",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (memo.priority == 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Spacer(Modifier.weight(1f))
+                        } else {
+                            val hint = when (block.type) {
+                                NoteBlockType.LINK -> "https://..."
+                                NoteBlockType.IMAGE -> "이미지 URL"
+                                NoteBlockType.FILE -> "파일 URL 또는 경로"
+                                NoteBlockType.QUOTE -> "인용문"
+                                NoteBlockType.CODE -> "코드"
+                                NoteBlockType.TODO -> "할 일"
+                                else -> "내용을 입력하거나 / 를 눌러 명령"
+                            }
+                            val prefix = when (block.type) {
+                                NoteBlockType.BULLET -> "•"
+                                NoteBlockType.NUMBER -> "${index + 1}."
+                                NoteBlockType.QUOTE -> "│"
+                                else -> ""
+                            }
+                            if (prefix.isNotBlank()) {
                                 Text(
-                                    Instant.ofEpochMilli(memo.updatedAt).atZone(SCHOOL_ZONE).format(dateFormatter),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    prefix,
+                                    modifier = Modifier.padding(top = 14.dp, end = 4.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-
-                            Spacer(Modifier.height(7.dp))
-
-                            if (memo.title.isNotBlank()) {
-                                Text(
-                                    memo.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(Modifier.height(4.dp))
-                            }
-
-                            if (memo.checklist && memo.checkItems.isNotEmpty()) {
-                                memo.checkItems.forEachIndexed { index, item ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = item.done,
-                                            enabled = memo.deletedAt == 0L,
-                                            onCheckedChange = { vm.toggleMemoCheck(memo.id, index) }
-                                        )
-                                        Text(
-                                            item.text,
-                                            modifier = Modifier.weight(1f),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = if (item.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            } else {
-                                Text(
-                                    memo.text,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 8,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            if (memo.attachmentUris.isNotEmpty()) {
-                                val imageUris = memo.attachmentUris.filter { uri ->
-                                    runCatching {
-                                        context.contentResolver.getType(Uri.parse(uri))?.startsWith("image/") == true
-                                    }.getOrDefault(false)
-                                }
-                                if (imageUris.isNotEmpty()) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        imageUris.forEach { uri ->
-                                            Surface(
-                                                modifier = Modifier.size(84.dp),
-                                                shape = RoundedCornerShape(12.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant
-                                            ) {
-                                                AndroidView(
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    factory = { ctx ->
-                                                        ImageView(ctx).apply {
-                                                            scaleType = ImageView.ScaleType.CENTER_CROP
-                                                            setImageURI(Uri.parse(uri))
-                                                        }
-                                                    },
-                                                    update = { imageView -> imageView.setImageURI(Uri.parse(uri)) }
+                            TextField(
+                                value = block.content,
+                                onValueChange = { value ->
+                                    when {
+                                        value == "/" -> {
+                                            blocks = blocks.map {
+                                                if (it.id == block.id) it.copy(content = "") else it
+                                            }
+                                            addMenuExpanded = true
+                                            dirty = true
+                                        }
+                                        value.contains("\n") -> {
+                                            val split = value.split("\n", limit = 2)
+                                            val m = blocks.toMutableList()
+                                            m[index] = block.copy(content = split[0])
+                                            m.add(
+                                                index + 1,
+                                                NoteBlock(
+                                                    id = java.util.UUID.randomUUID().toString(),
+                                                    type = NoteBlockType.TEXT,
+                                                    content = split.getOrElse(1) { "" },
+                                                    position = index + 1
                                                 )
+                                            )
+                                            blocks = m
+                                            dirty = true
+                                        }
+                                        else -> {
+                                            blocks = blocks.map {
+                                                if (it.id == block.id) it.copy(content = value) else it
                                             }
+                                            dirty = true
                                         }
                                     }
-                                }
-
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    memo.attachmentUris.forEachIndexed { index, uri ->
-                                        AssistChip(
-                                            onClick = {
-                                                runCatching {
-                                                    context.startActivity(
-                                                        Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
-                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                        }
-                                                    )
-                                                }
-                                            },
-                                            label = { Text("첨부 " + (index + 1)) }
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (memo.reminderAt > System.currentTimeMillis()) {
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    "알림 · " + Instant.ofEpochMilli(memo.reminderAt).atZone(SCHOOL_ZONE)
-                                        .format(DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREA)),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            if (reminderMemoId == memo.id && memo.deletedAt == 0L) {
-                                Spacer(Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    AssistChip(
-                                        onClick = {
-                                            vm.setMemoReminder(memo.id, System.currentTimeMillis() + 60L * 60L * 1000L)
-                                            reminderMemoId = null
-                                        },
-                                        label = { Text("1시간 후") }
+                                },
+                                placeholder = {
+                                    Text(
+                                        hint,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                                     )
-                                    AssistChip(
-                                        onClick = {
-                                            val now = System.currentTimeMillis()
-                                            var target = schoolToday().atTime(17, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
-                                            if (target <= now) {
-                                                target = schoolToday().plusDays(1).atTime(17, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
-                                            }
-                                            vm.setMemoReminder(memo.id, target)
-                                            reminderMemoId = null
-                                        },
-                                        label = { Text("17:00") }
-                                    )
-                                    AssistChip(
-                                        onClick = {
-                                            val target = schoolToday().plusDays(1).atTime(9, 0).atZone(SCHOOL_ZONE).toInstant().toEpochMilli()
-                                            vm.setMemoReminder(memo.id, target)
-                                            reminderMemoId = null
-                                        },
-                                        label = { Text("내일 09:00") }
-                                    )
-                                    AssistChip(
-                                        onClick = {
-                                            val now = java.time.ZonedDateTime.now(SCHOOL_ZONE)
-                                            DatePickerDialog(
-                                                context,
-                                                { _, year, month, day ->
-                                                    TimePickerDialog(
-                                                        context,
-                                                        { _, hour, minute ->
-                                                            val target = LocalDate.of(year, month + 1, day)
-                                                                .atTime(hour, minute)
-                                                                .atZone(SCHOOL_ZONE)
-                                                                .toInstant()
-                                                                .toEpochMilli()
-                                                            if (target > System.currentTimeMillis()) {
-                                                                vm.setMemoReminder(memo.id, target)
-                                                                reminderMemoId = null
-                                                            }
-                                                        },
-                                                        now.hour,
-                                                        now.minute,
-                                                        true
-                                                    ).show()
-                                                },
-                                                now.year,
-                                                now.monthValue - 1,
-                                                now.dayOfMonth
-                                            ).apply {
-                                                datePicker.minDate = System.currentTimeMillis() - 1000L
-                                            }.show()
-                                        },
-                                        label = { Text("직접 지정") }
-                                    )
-                                    if (memo.reminderAt > 0L) {
-                                        AssistChip(
-                                            onClick = {
-                                                vm.clearMemoReminder(memo.id)
-                                                reminderMemoId = null
-                                            },
-                                            label = { Text("알림 해제") }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                if (memo.deletedAt > 0L) {
-                                    TextButton(onClick = { vm.restoreMemo(memo.id) }) { Text("복원") }
-                                    TextButton(onClick = { vm.permanentlyDeleteMemo(memo.id) }) {
-                                        Text("영구 삭제", color = MaterialTheme.colorScheme.error)
-                                    }
-                                } else {
-                                    TextButton(onClick = { vm.toggleMemoPin(memo.id) }) {
-                                        Text(if (memo.pinned) "고정 해제" else "고정")
-                                    }
-                                    TextButton(onClick = { vm.memoToTodo(memo.id, today) }) { Text("TODO") }
-                                    TextButton(onClick = { vm.memoToCalendar(memo.id, today) }) { Text("일정") }
-                                    TextButton(onClick = { reminderMemoId = if (reminderMemoId == memo.id) null else memo.id }) {
-                                        Text("알림")
-                                    }
-                                    TextButton(
-                                        onClick = {
-                                            val shareText = buildString {
-                                                if (memo.title.isNotBlank()) append(memo.title).append("\n\n")
-                                                append(memo.text)
-                                            }
-                                            val uris = ArrayList(memo.attachmentUris.map { Uri.parse(it) })
-                                            val shareIntent = if (uris.isEmpty()) {
-                                                Intent(Intent.ACTION_SEND).apply {
-                                                    type = "text/plain"
-                                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                                }
-                                            } else {
-                                                Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                                                    type = "*/*"
-                                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
-                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                            }
-                                            context.startActivity(Intent.createChooser(shareIntent, "메모 공유"))
-                                        }
-                                    ) { Text("공유") }
-                                    TextButton(onClick = { vm.toggleMemoArchive(memo.id) }) {
-                                        Text(if (memo.archived) "복원" else "보관")
-                                    }
-                                     TextButton(
-                                        onClick = {
-                                            editingId = memo.id
-                                            text = memo.text
-                                            title = memo.title
-                                            category = memo.category
-                                            checklist = memo.checklist
-                                            priority = memo.priority
-                                            pendingAttachments = memo.attachmentUris
-                                            vm.saveMemoDraft(text, category, checklist, title, priority)
-                                        }
-                                    ) {
-                                        Icon(Icons.Filled.Edit, contentDescription = "메모 수정", modifier = Modifier.size(17.dp))
-                                    }
-                                    IconButton(onClick = { vm.deleteMemo(memo.id) }) {
-                                        Icon(Icons.Filled.Delete, contentDescription = "휴지통으로 이동", tint = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
+                                },
+                                minLines = 1,
+                                textStyle = when (block.type) {
+                                    NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                    NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                                    NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
+                                    else -> MaterialTheme.typography.bodyLarge
+                                },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
                         }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box {
+                TextButton(
+                    onClick = { addMenuExpanded = true },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "＋  블록 추가",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = addMenuExpanded,
+                    onDismissRequest = { addMenuExpanded = false }
+                ) {
+                    listOf(
+                        NoteBlockType.TEXT to "텍스트",
+                        NoteBlockType.HEADING1 to "제목",
+                        NoteBlockType.HEADING2 to "소제목",
+                        NoteBlockType.TODO to "체크리스트",
+                        NoteBlockType.BULLET to "목록",
+                        NoteBlockType.QUOTE to "인용",
+                        NoteBlockType.CODE to "코드",
+                        NoteBlockType.LINK to "링크",
+                        NoteBlockType.IMAGE to "이미지",
+                        NoteBlockType.FILE to "파일",
+                        NoteBlockType.DIVIDER to "구분선"
+                    ).forEach { (type, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                blocks = blocks + NoteBlock(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    type = type,
+                                    position = blocks.size
+                                )
+                                dirty = true
+                                addMenuExpanded = false
+                            }
+                        )
                     }
                 }
             }

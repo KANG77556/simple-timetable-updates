@@ -1,4 +1,4 @@
-﻿package kr.hs.msji.simpletimetable
+package kr.hs.msji.simpletimetable
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -19,6 +19,7 @@ data class AppUiState(
     val myTimetable: List<TimetableItem> = emptyList(),
     val allTimetable: List<TimetableItem> = emptyList(),
     val memos: List<MemoItem> = emptyList(),
+    val notePages: List<NotePage> = emptyList(),
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
     val classrooms: List<Classroom> = emptyList(),
@@ -42,6 +43,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = initialMemos,
+            notePages = store.loadNotePages(),
             todos = store.loadTodos(),
             calendar = store.loadCalendar(),
             lastLoginId = store.loginId,
@@ -51,6 +53,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     )
     val state: StateFlow<AppUiState> = _state
+
+    init {
+        if (_state.value.loggedIn) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val userId = _state.value.profile.userId.ifBlank { store.userId }
+                if (userId.isNotBlank()) {
+                    runTask { refreshTodayDirect(userId) }
+                }
+            }
+        }
+    }
 
     fun login(loginId: String, password: String) = viewModelScope.launch(Dispatchers.IO) {
         runTask {
@@ -110,6 +123,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(today = date, myTimetable = rows)
     }
 
+    fun preloadAllIfNeeded() {
+        if (!_state.value.loggedIn || _state.value.allTimetable.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { refreshAllWeekDirect(_state.value.today) }
+        }
+    }
+
+    fun preloadClassroomsIfNeeded() {
+        if (!_state.value.loggedIn || _state.value.classrooms.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val rooms = api.fetchClassrooms()
+                _state.value = _state.value.copy(classrooms = rooms)
+            }
+        }
+    }
+
     fun refreshAll(date: String = _state.value.today) = viewModelScope.launch(Dispatchers.IO) {
         runTask { refreshAllWeekDirect(date) }
     }
@@ -127,6 +157,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
+    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
+        runTask {
+            val local = store.loadNotePages()
+            val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
+            val remote = api.fetchNotePages()
+            val deletedIds = store.deletedNoteIds()
+            val uploadedById = uploaded.associateBy { it.id }
+            val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
+                .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
+                .distinctBy { it.id }
+                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+            store.saveNotePages(merged)
+            _state.value = _state.value.copy(notePages = merged)
+        }
+    }
+
+    fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        runTask {
+            val page = api.fetchNote(id)
+            val list = _state.value.notePages.filterNot { it.id == id } + page
+            store.saveNotePages(list)
+            _state.value = _state.value.copy(notePages = list)
+        }
+    }
+
+    fun saveNotePage(page: NotePage) = viewModelScope.launch(Dispatchers.IO) {
+        val pending = page.copy(syncState = "PENDING")
+        val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+        store.saveNotePages(local)
+        _state.value = _state.value.copy(notePages = local)
+        runTask {
+            val saved = api.saveNote(pending)
+            val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
+                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+            store.saveNotePages(next)
+            _state.value = _state.value.copy(notePages = next)
+        }
+        if (_state.value.message.isNotBlank()) {
+            val failed = _state.value.notePages.map {
+                if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
+            }
+            store.saveNotePages(failed)
+            _state.value = _state.value.copy(notePages = failed)
+        }
+    }
+
+    fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        val next = _state.value.notePages.filterNot { it.id == id }
+        store.markNoteDeleted(id)
+        store.saveNotePages(next)
+        _state.value = _state.value.copy(notePages = next)
+        runTask {
+            api.archiveNote(id)
+        }
+    }
     fun addMemo(
         text: String,
         category: String = "일반",
@@ -351,10 +437,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun memoDraftPriority(): Int = store.memoDraftPriority
 
     fun addTodo(text: String, dueDate: String) {
-        if (text.isBlank()) return
-        val list = _state.value.todos + TodoItem(System.currentTimeMillis(), text.trim(), false, dueDate)
+        val normalized = text.trim()
+        if (normalized.isBlank()) return
+        if (_state.value.todos.any { it.text == normalized && it.dueDate == dueDate }) return
+        val list = _state.value.todos + TodoItem(System.currentTimeMillis(), normalized, false, dueDate)
         store.saveTodos(list)
         _state.value = _state.value.copy(todos = list)
+    }
+
+    fun noteBlockToTodo(content: String, dueDate: String) {
+        addTodo(content, dueDate)
     }
 
     fun toggleTodo(id: Long) {
@@ -375,10 +467,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addCalendar(title: String, date: String) {
-        if (title.isBlank() || date.isBlank()) return
-        val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), title.trim(), date)
+        val normalized = title.trim()
+        if (normalized.isBlank() || date.isBlank()) return
+        if (_state.value.calendar.any { it.title == normalized && it.date == date }) return
+        val list = _state.value.calendar + CalendarItem(System.currentTimeMillis(), normalized, date)
         store.saveCalendar(list)
         _state.value = _state.value.copy(calendar = list)
+    }
+
+    fun noteBlockToCalendar(content: String, date: String) {
+        addCalendar(content.lineSequence().firstOrNull().orEmpty().ifBlank { content }, date)
     }
 
     fun deleteCalendar(id: Long) {

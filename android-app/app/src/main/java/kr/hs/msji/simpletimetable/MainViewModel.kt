@@ -20,6 +20,7 @@ data class AppUiState(
     val allTimetable: List<TimetableItem> = emptyList(),
     val memos: List<MemoItem> = emptyList(),
     val notePages: List<NotePage> = emptyList(),
+    val pinnedNoteCount: Int? = null,
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
     val classrooms: List<Classroom> = emptyList(),
@@ -31,6 +32,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
     private val api = ScerpApi(store)
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
+    private val initialNotePages = run {
+        store.ensureNoteAccount(store.userId)
+        store.loadNotePages()
+    }
     private val initialMemos = store.loadMemos().let { items ->
         val cutoff = System.currentTimeMillis() - trashRetentionMillis
         val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
@@ -43,7 +48,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = initialMemos,
-            notePages = store.loadNotePages(),
+            notePages = initialNotePages,
             todos = store.loadTodos(),
             calendar = store.loadCalendar(),
             lastLoginId = store.loginId,
@@ -67,11 +72,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(loginId: String, password: String) = viewModelScope.launch(Dispatchers.IO) {
         runTask {
+            val previousUserId = store.userId
             val profile = api.login(loginId, password)
+            store.switchNoteAccount(previousUserId, profile.userId)
             store.userId = profile.userId
             store.displayName = profile.displayName
             store.loginId = loginId.trim()
-            _state.value = _state.value.copy(loggedIn = true, profile = profile)
+            val accountNotes = store.loadNotePages()
+            _state.value = _state.value.copy(
+                loggedIn = true,
+                profile = profile,
+                notePages = accountNotes,
+                pinnedNoteCount = null
+            )
             refreshTodayDirect(profile.userId)
         }
     }
@@ -157,20 +170,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
-    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
-        runTask {
-            val local = store.loadNotePages()
-            val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
-            val remote = api.fetchNotePages()
-            val deletedIds = store.deletedNoteIds()
-            val uploadedById = uploaded.associateBy { it.id }
-            val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
-                .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
-                .distinctBy { it.id }
-                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
-            store.saveNotePages(merged)
-            _state.value = _state.value.copy(notePages = merged)
+    fun preloadNotes() {
+        if (!_state.value.loggedIn) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val local = store.loadNotePages()
+                val remote = api.fetchNotePages()
+                val deletedIds = store.deletedNoteIds()
+                val pendingById = local
+                    .filter { it.syncState != "SYNCED" }
+                    .associateBy { it.id }
+                val effective = remote
+                    .filterNot { it.id in deletedIds }
+                    .map { summary -> pendingById[summary.id] ?: summary }
+                    .plus(
+                        pendingById.values.filter { page ->
+                            page.id !in deletedIds && remote.none { it.id == page.id }
+                        }
+                    )
+                    .distinctBy { it.id }
+
+                _state.value = _state.value.copy(
+                    pinnedNoteCount = effective.count { it.pinned && !it.archived }
+                )
+            }
         }
+    }
+
+    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
+        runTask { refreshNotesDirect() }
+    }
+
+    private fun refreshNotesDirect() {
+        val local = store.loadNotePages()
+        val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
+        val remote = api.fetchNotePages()
+        val deletedIds = store.deletedNoteIds()
+        val uploadedById = uploaded.associateBy { it.id }
+        val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
+            .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
+            .distinctBy { it.id }
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+        store.saveNotePages(merged)
+        _state.value = _state.value.copy(
+            notePages = merged,
+            pinnedNoteCount = merged.count { it.pinned && !it.archived }
+        )
     }
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -178,7 +223,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val page = api.fetchNote(id)
             val list = _state.value.notePages.filterNot { it.id == id } + page
             store.saveNotePages(list)
-            _state.value = _state.value.copy(notePages = list)
+            _state.value = _state.value.copy(
+                notePages = list,
+                pinnedNoteCount = list.count { it.pinned && !it.archived }
+            )
         }
     }
 
@@ -187,20 +235,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
         store.saveNotePages(local)
-        _state.value = _state.value.copy(notePages = local)
+        _state.value = _state.value.copy(
+            notePages = local,
+            pinnedNoteCount = local.count { it.pinned && !it.archived }
+        )
         runTask {
             val saved = api.saveNote(pending)
             val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
                 .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
             store.saveNotePages(next)
-            _state.value = _state.value.copy(notePages = next)
+            _state.value = _state.value.copy(
+                notePages = next,
+                pinnedNoteCount = next.count { it.pinned && !it.archived }
+            )
         }
         if (_state.value.message.isNotBlank()) {
             val failed = _state.value.notePages.map {
                 if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
             }
             store.saveNotePages(failed)
-            _state.value = _state.value.copy(notePages = failed)
+            _state.value = _state.value.copy(
+                notePages = failed,
+                pinnedNoteCount = failed.count { it.pinned && !it.archived }
+            )
         }
     }
 
@@ -208,7 +265,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val next = _state.value.notePages.filterNot { it.id == id }
         store.markNoteDeleted(id)
         store.saveNotePages(next)
-        _state.value = _state.value.copy(notePages = next)
+        _state.value = _state.value.copy(
+            notePages = next,
+            pinnedNoteCount = next.count { it.pinned && !it.archived }
+        )
         runTask {
             api.archiveNote(id)
         }

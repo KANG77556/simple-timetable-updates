@@ -27,6 +27,73 @@ class LocalStore(context: Context) {
         prefs.edit().remove("session_cookie").apply()
     }
 
+    private fun scopedNoteKey(base: String, userId: String): String =
+        base + "__" + userId.trim()
+
+    private var noteOwnerUserId: String
+        get() = prefs.getString("note_pages_owner_user_id", "") ?: ""
+        set(value) = prefs.edit().putString("note_pages_owner_user_id", value).apply()
+
+    fun ensureNoteAccount(activeUserId: String) {
+        val active = activeUserId.trim()
+        if (active.isBlank()) return
+        val owner = noteOwnerUserId
+        if (owner.isBlank()) {
+            noteOwnerUserId = active
+        } else if (owner != active) {
+            switchNoteAccount(owner, active)
+        }
+    }
+
+    fun switchNoteAccount(previousUserId: String, newUserId: String) {
+        val previous = previousUserId.trim()
+        val next = newUserId.trim()
+        if (next.isBlank()) return
+        if (previous == next) {
+            noteOwnerUserId = next
+            return
+        }
+
+        val owner = noteOwnerUserId
+        val editor = prefs.edit()
+
+        if (previous.isNotBlank() && (owner.isBlank() || owner == previous)) {
+            prefs.getString("note_pages_v1", null)?.let {
+                editor.putString(scopedNoteKey("note_pages_v1", previous), it)
+            }
+            editor.putBoolean(
+                scopedNoteKey("note_pages_initialized_v1", previous),
+                prefs.getBoolean("note_pages_initialized_v1", false)
+            )
+            editor.putStringSet(
+                scopedNoteKey("deleted_note_ids_v1", previous),
+                prefs.getStringSet("deleted_note_ids_v1", emptySet())?.toSet() ?: emptySet()
+            )
+        }
+
+        val nextPagesKey = scopedNoteKey("note_pages_v1", next)
+        val nextInitializedKey = scopedNoteKey("note_pages_initialized_v1", next)
+        val nextDeletedKey = scopedNoteKey("deleted_note_ids_v1", next)
+
+        if (prefs.contains(nextPagesKey)) {
+            editor.putString("note_pages_v1", prefs.getString(nextPagesKey, "[]") ?: "[]")
+            editor.putBoolean(
+                "note_pages_initialized_v1",
+                prefs.getBoolean(nextInitializedKey, true)
+            )
+            editor.putStringSet(
+                "deleted_note_ids_v1",
+                prefs.getStringSet(nextDeletedKey, emptySet())?.toSet() ?: emptySet()
+            )
+        } else {
+            editor.remove("note_pages_v1")
+            editor.remove("note_pages_initialized_v1")
+            editor.remove("deleted_note_ids_v1")
+        }
+
+        editor.putString("note_pages_owner_user_id", next).apply()
+    }
+
     var latestTimetableJson: String
         get() = prefs.getString("today_timetable", "[]") ?: "[]"
         set(value) = prefs.edit().putString("today_timetable", value).apply()

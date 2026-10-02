@@ -180,6 +180,7 @@ fun SimpleTimetableApp(
     LaunchedEffect(state.loggedIn) {
         kotlinx.coroutines.delay(150)
         vm.preloadAllIfNeeded()
+        vm.preloadNotes()
         kotlinx.coroutines.delay(100)
         vm.preloadClassroomsIfNeeded()
     }
@@ -764,6 +765,9 @@ private val SCHOOL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
 
 internal fun schoolToday(): LocalDate = LocalDate.now(SCHOOL_ZONE)
 
+internal fun countPinnedActiveNotePages(pages: List<NotePage>): Int =
+    pages.count { it.pinned && !it.archived }
+
 internal fun isCurrentTimetableLesson(
     row: TimetableItem,
     today: LocalDate = schoolToday(),
@@ -1027,7 +1031,7 @@ private fun TodayScreen(
             }
             val todayTodos = activeTodos.count { it.dueDate == todayKey }
             val todayEvents = state.calendar.count { it.date == todayKey }
-            val pinnedMemos = state.memos.count { it.pinned }
+            val pinnedMemos = state.pinnedNoteCount ?: countPinnedActiveNotePages(state.notePages)
 
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),

@@ -385,6 +385,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         noteMutationLocks.remove(id, lock)
     }
 
+    fun archiveNotePages(ids: Set<String>) = viewModelScope.launch(Dispatchers.IO) {
+        if (ids.isEmpty()) return@launch
+
+        val orderedIds = ids.toList().sorted()
+        val locks = orderedIds.map { id -> id to noteMutationLocks.computeIfAbsent(id) { Mutex() } }
+
+        suspend fun <T> withLocks(index: Int = 0, block: suspend () -> T): T {
+            if (index >= locks.size) return block()
+            return locks[index].second.withLock {
+                withLocks(index + 1, block)
+            }
+        }
+
+        withLocks {
+            val next = _state.value.notePages.filterNot { it.id in ids }
+            ids.forEach { store.markNoteDeleted(it) }
+            store.saveNotePages(next)
+            _state.value = _state.value.copy(
+                notePages = next,
+                pinnedNoteCount = next.count { it.pinned && !it.archived }
+            )
+
+            for (id in orderedIds) {
+                runTask { api.archiveNote(id) }
+            }
+        }
+
+        locks.forEach { (id, lock) -> noteMutationLocks.remove(id, lock) }
+    }
+
     fun addMemo(
         text: String,
         category: String = "일반",

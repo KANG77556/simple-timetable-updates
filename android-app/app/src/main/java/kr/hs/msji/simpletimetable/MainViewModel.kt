@@ -162,9 +162,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!_state.value.loggedIn) return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
+                val local = store.loadNotePages()
                 val remote = api.fetchNotePages()
+                val deletedIds = store.deletedNoteIds()
+                val pendingById = local
+                    .filter { it.syncState != "SYNCED" }
+                    .associateBy { it.id }
+                val effective = remote
+                    .filterNot { it.id in deletedIds }
+                    .map { summary -> pendingById[summary.id] ?: summary }
+                    .plus(
+                        pendingById.values.filter { page ->
+                            page.id !in deletedIds && remote.none { it.id == page.id }
+                        }
+                    )
+                    .distinctBy { it.id }
+
                 _state.value = _state.value.copy(
-                    pinnedNoteCount = remote.count { it.pinned && !it.archived }
+                    pinnedNoteCount = effective.count { it.pinned && !it.archived }
                 )
             }
         }

@@ -1916,14 +1916,26 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
     if (selectedId == null) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 10.dp, bottom = 24.dp)
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .padding(top = 2.dp, bottom = 16.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("내 페이지", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("간단하게 기록하고 자동으로 동기화합니다.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                TextButton(enabled = state.loggedIn && !state.loading, onClick = { vm.refreshNotes() }) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "페이지",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(
+                    enabled = state.loggedIn && !state.loading,
+                    onClick = { vm.refreshNotes() },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
                     Text(if (state.loading) "동기화 중…" else "동기화")
                 }
                 FilledTonalButton(
@@ -1937,32 +1949,50 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             version = 0,
                             createdAt = now,
                             updatedAt = now,
-                            blocks = listOf(NoteBlock(id = java.util.UUID.randomUUID().toString(), type = NoteBlockType.TEXT, position = 0)),
+                            blocks = listOf(
+                                NoteBlock(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    type = NoteBlockType.TEXT,
+                                    position = 0
+                                )
+                            ),
                             syncState = "LOCAL"
                         )
                         vm.saveNotePage(page)
                         selectedId = page.id
-                    }
-                ) { Text("+ 새 페이지") }
+                    },
+                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp)
+                ) {
+                    Text("+")
+                }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text("페이지 검색") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.bodyMedium,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+                    focusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.40f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
             )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(4.dp))
 
             val pages = state.notePages
                 .filterNot { it.archived }
@@ -1976,22 +2006,48 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
             if (pages.isEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 56.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("📄", style = MaterialTheme.typography.displaySmall)
-                    Spacer(Modifier.height(10.dp))
-                    Text(if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
+                    Icon(
+                        Icons.Filled.List,
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        if (query.isBlank()) "새 페이지를 눌러 첫 메모를 작성하세요." else "다른 검색어를 입력해 보세요.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        if (query.isBlank()) "+ 버튼으로 새 페이지를 만드세요." else "다른 검색어를 입력해 보세요.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(top = 2.dp, bottom = 84.dp)
+                ) {
                     items(pages, key = { it.id }) { page ->
+                        val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                        val updatedText = runCatching {
+                            java.time.Instant.parse(page.updatedAt)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .format(java.time.format.DateTimeFormatter.ofPattern("MM.dd HH:mm"))
+                        }.getOrDefault("")
+                        val syncLabel = when (page.syncState) {
+                            "PENDING" -> "동기화 대기"
+                            "FAILED" -> "동기화 실패"
+                            else -> ""
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -1999,13 +2055,24 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             TextButton(
                                 onClick = {
                                     selectedId = page.id
-                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) vm.openNotePage(page.id)
+                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
+                                        vm.openNotePage(page.id)
+                                    }
                                 },
                                 modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 7.dp)
                             ) {
-                                Text("📄", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.titleLarge)
-                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                                Icon(
+                                    Icons.Filled.List,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             page.title.ifBlank { "제목 없음" },
@@ -2017,27 +2084,45 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                         )
                                         if (page.pinned) {
                                             Spacer(Modifier.width(6.dp))
-                                            Text("고정", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                "고정",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
                                         }
                                     }
-                                    val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
+
                                     if (preview.isNotBlank()) {
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(preview, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Spacer(Modifier.height(1.dp))
+                                        Text(
+                                            preview,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                    Spacer(Modifier.height(3.dp))
+
+                                    Spacer(Modifier.height(1.dp))
                                     Text(
-                                        page.category.ifBlank { "개인" } + " · " + when (page.syncState) {
-                                            "SYNCED" -> "동기화됨"
-                                            "PENDING" -> "동기화 대기"
-                                            "FAILED" -> "동기화 실패"
-                                            else -> if (state.loggedIn) "로컬" else "오프라인"
-                                        },
+                                        listOfNotNull(
+                                            page.category.ifBlank { "개인" },
+                                            updatedText.takeIf { it.isNotBlank() },
+                                            syncLabel.takeIf { it.isNotBlank() }
+                                        ).joinToString(" · "),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (page.syncState == "FAILED") {
+                                            MaterialTheme.colorScheme.error
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
                                     )
                                 }
-                                Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "›",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                )
                             }
 
                             Box {
@@ -2062,7 +2147,11 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 }
                             }
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 30.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+                        )
                     }
                 }
             }

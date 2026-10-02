@@ -277,6 +277,11 @@ class LocalStore(context: Context) {
         prefs.edit().putStringSet("deleted_note_ids_v1", deletedNoteIds() + id).apply()
     }
 
+    fun clearNoteDeleted(id: String) {
+        if (id.isBlank()) return
+        prefs.edit().putStringSet("deleted_note_ids_v1", deletedNoteIds() - id).apply()
+    }
+
     fun loadNotePages(): List<NotePage> {
         val stored = runCatching {
             val arr = JSONArray(prefs.getString("note_pages_v1", "[]"))

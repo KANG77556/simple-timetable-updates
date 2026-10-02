@@ -295,6 +295,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun refreshNotesDirect() {
         val local = store.loadNotePages()
         val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
+
+        store.deletedNoteIds().toList().sorted().forEach { id ->
+            runCatching {
+                api.archiveNote(id)
+                store.clearNoteDeleted(id)
+            }
+        }
+
         val remote = api.fetchNotePages()
         val deletedIds = store.deletedNoteIds()
         val uploadedById = uploaded.associateBy { it.id }
@@ -380,6 +388,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             runTask {
                 api.archiveNote(id)
+                store.clearNoteDeleted(id)
             }
         }
         noteMutationLocks.remove(id, lock)
@@ -408,7 +417,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
 
             for (id in orderedIds) {
-                runTask { api.archiveNote(id) }
+                runCatching {
+                    api.archiveNote(id)
+                    store.clearNoteDeleted(id)
+                }
             }
         }
 

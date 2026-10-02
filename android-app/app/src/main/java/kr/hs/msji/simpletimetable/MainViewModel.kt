@@ -157,20 +157,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 
-    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
-        runTask {
-            val local = store.loadNotePages()
-            val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
-            val remote = api.fetchNotePages()
-            val deletedIds = store.deletedNoteIds()
-            val uploadedById = uploaded.associateBy { it.id }
-            val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
-                .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
-                .distinctBy { it.id }
-                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
-            store.saveNotePages(merged)
-            _state.value = _state.value.copy(notePages = merged)
+    fun preloadNotes() {
+        if (!_state.value.loggedIn) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { refreshNotesDirect() }
         }
+    }
+
+    fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
+        runTask { refreshNotesDirect() }
+    }
+
+    private fun refreshNotesDirect() {
+        val local = store.loadNotePages()
+        val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
+        val remote = api.fetchNotePages()
+        val deletedIds = store.deletedNoteIds()
+        val uploadedById = uploaded.associateBy { it.id }
+        val merged = remote.filterNot { it.id in deletedIds }.map { summary -> uploadedById[summary.id] ?: summary }
+            .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
+            .distinctBy { it.id }
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+        store.saveNotePages(merged)
+        _state.value = _state.value.copy(notePages = merged)
     }
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {

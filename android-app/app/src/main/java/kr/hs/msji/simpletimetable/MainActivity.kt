@@ -1913,56 +1913,49 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
     if (selectedId == null) {
         Column(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp)
-                .padding(bottom = 24.dp)
+            Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 10.dp, bottom = 24.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("페이지", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "PC · 웹 · Android에서 같은 메모를 사용합니다.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("내 페이지", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("간단하게 기록하고 자동으로 동기화합니다.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                TextButton(onClick = { vm.refreshNotes() }, enabled = state.loggedIn) { Text("동기화") }
+                TextButton(enabled = state.loggedIn && !state.loading, onClick = { vm.refreshNotes() }) {
+                    Text(if (state.loading) "동기화 중…" else "동기화")
+                }
                 FilledTonalButton(
                     enabled = !state.loading,
                     onClick = {
-                    val now = java.time.Instant.now().toString()
-                    val page = NotePage(
-                        id = java.util.UUID.randomUUID().toString(),
-                        title = "새 페이지",
-                        category = "개인",
-                        version = 0,
-                        createdAt = now,
-                        updatedAt = now,
-                        blocks = listOf(
-                            NoteBlock(
-                                id = java.util.UUID.randomUUID().toString(),
-                                type = NoteBlockType.TEXT,
-                                position = 0
-                            )
-                        ),
-                        syncState = "LOCAL"
-                    )
-                    vm.saveNotePage(page)
-                    selectedId = page.id
-                }) { Text(if (state.loading) "처리 중…" else "＋ 새 페이지") }
+                        val now = java.time.Instant.now().toString()
+                        val page = NotePage(
+                            id = java.util.UUID.randomUUID().toString(),
+                            title = "",
+                            category = "개인",
+                            version = 0,
+                            createdAt = now,
+                            updatedAt = now,
+                            blocks = listOf(NoteBlock(id = java.util.UUID.randomUUID().toString(), type = NoteBlockType.TEXT, position = 0)),
+                            syncState = "LOCAL"
+                        )
+                        vm.saveNotePage(page)
+                        selectedId = page.id
+                    }
+                ) { Text("+ 새 페이지") }
             }
+
+            Spacer(Modifier.height(14.dp))
 
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("제목 · 내용 · 카테고리 검색") },
+                placeholder = { Text("페이지 검색") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -1979,100 +1972,67 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
 
             if (pages.isEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            if (query.isBlank()) "새 페이지를 만들어 메모를 시작하세요." else "다른 검색어를 입력해 보세요.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text("📄", style = MaterialTheme.typography.displaySmall)
+                    Spacer(Modifier.height(10.dp))
+                    Text(if (query.isBlank()) "아직 페이지가 없습니다." else "검색 결과가 없습니다.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (query.isBlank()) "새 페이지를 눌러 첫 메모를 작성하세요." else "다른 검색어를 입력해 보세요.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp)
-                ) {
+                LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp)) {
                     items(pages, key = { it.id }) { page ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                        TextButton(
+                            onClick = {
+                                selectedId = page.id
+                                if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) vm.openNotePage(page.id)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
                         ) {
-                            TextButton(
-                                onClick = {
-                                    selectedId = page.id
-                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
-                                        vm.openNotePage(page.id)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (page.pinned) {
-                                            Text("★", color = MaterialTheme.colorScheme.primary)
-                                            Spacer(Modifier.width(6.dp))
-                                        }
-                                        Text(
-                                            page.title.ifBlank { "제목 없음" },
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
-                                    if (preview.isNotBlank()) {
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            preview,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    Spacer(Modifier.height(2.dp))
+                            Text("📄", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.titleLarge)
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        page.category.ifBlank { "개인" } + " · " + when (page.syncState) {
-                                            "SYNCED" -> "동기화됨"
-                                            "PENDING" -> if (state.loading) "동기화 중…" else "동기화 대기"
-                                            "FAILED" -> "동기화 실패"
-                                            else -> if (state.loggedIn) "로컬" else "오프라인"
-                                        },
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (page.syncState == "SYNCED") MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                        page.title.ifBlank { "제목 없음" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
+                                    if (page.pinned) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("고정", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    }
                                 }
+                                val preview = page.blocks.firstOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                                if (preview.isNotBlank()) {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(preview, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Spacer(Modifier.height(3.dp))
                                 Text(
-                                    "›",
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    page.category.ifBlank { "개인" } + " · " + when (page.syncState) {
+                                        "SYNCED" -> "동기화됨"
+                                        "PENDING" -> "동기화 대기"
+                                        "FAILED" -> "동기화 실패"
+                                        else -> if (state.loggedIn) "로컬" else "오프라인"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                            Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
                     }
                 }
             }
@@ -2081,25 +2041,21 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     }
 
     if (selected == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         return
     }
 
     var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
     var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
     var blocks by remember(selected.id, selected.blocks) {
-        mutableStateOf(
-            selected.blocks.ifEmpty {
-                listOf(NoteBlock(java.util.UUID.randomUUID().toString(), NoteBlockType.TEXT, position = 0))
-            }
-        )
+        mutableStateOf(selected.blocks.ifEmpty { listOf(NoteBlock(java.util.UUID.randomUUID().toString(), NoteBlockType.TEXT, position = 0)) })
     }
     var dirty by remember(selected.id) { mutableStateOf(false) }
     var topMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var categoryMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
+    var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
+    var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
 
     fun savePage() {
         vm.saveNotePage(
@@ -2112,32 +2068,40 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         )
     }
 
+    fun addOrTransformBlock(type: NoteBlockType) {
+        val target = slashTargetId
+        if (target != null) {
+            blocks = blocks.map { block -> if (block.id == target) block.copy(type = type, content = "") else block }
+        } else {
+            blocks = blocks + NoteBlock(id = java.util.UUID.randomUUID().toString(), type = type, position = blocks.size)
+        }
+        dirty = true
+        slashTargetId = null
+        addMenuExpanded = false
+    }
+
     LaunchedEffect(dirty, title, category, blocks) {
         if (dirty) {
-            kotlinx.coroutines.delay(700)
+            kotlinx.coroutines.delay(650)
             dirty = false
             savePage()
         }
     }
 
     Column(
-        Modifier
-            .fillMaxSize()
-            .imePadding()
-            .padding(horizontal = 14.dp)
-            .padding(bottom = 12.dp)
+        Modifier.fillMaxSize().imePadding().padding(horizontal = 18.dp).padding(bottom = 10.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = {
-                if (dirty) {
-                    dirty = false
-                    savePage()
-                }
-                selectedId = null
-            }) { Text("‹ 목록") }
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = {
+                    if (dirty) {
+                        dirty = false
+                        savePage()
+                    }
+                    selectedId = null
+                },
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
+            ) { Text("‹  메모") }
 
             Spacer(Modifier.weight(1f))
 
@@ -2147,38 +2111,32 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     selected.syncState == "PENDING" -> "동기화 중…"
                     selected.syncState == "SYNCED" -> "동기화됨 ✓"
                     !state.loggedIn -> "오프라인"
-                    else -> "로컬"
+                    else -> "저장됨"
                 },
                 style = MaterialTheme.typography.labelMedium,
-                color = if (!dirty && selected.syncState == "SYNCED") MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (!dirty && selected.syncState == "SYNCED") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Box {
-                TextButton(onClick = { topMenuExpanded = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
-                DropdownMenu(
-                    expanded = topMenuExpanded,
-                    onDismissRequest = { topMenuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("지금 저장") },
-                        onClick = {
-                            topMenuExpanded = false
-                            dirty = false
-                            savePage()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("삭제") },
-                        onClick = {
-                            topMenuExpanded = false
-                            vm.archiveNotePage(selected.id)
-                            selectedId = null
-                        }
-                    )
+                TextButton(onClick = { topMenuExpanded = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                    Text("⋯", style = MaterialTheme.typography.titleLarge)
+                }
+                DropdownMenu(expanded = topMenuExpanded, onDismissRequest = { topMenuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("지금 저장") }, onClick = {
+                        topMenuExpanded = false
+                        dirty = false
+                        savePage()
+                    })
+                    DropdownMenuItem(text = { Text("보관") }, onClick = {
+                        topMenuExpanded = false
+                        vm.archiveNotePage(selected.id)
+                        selectedId = null
+                    })
                 }
             }
         }
+
+        Spacer(Modifier.height(14.dp))
 
         TextField(
             value = title,
@@ -2187,14 +2145,11 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 dirty = true
             },
             placeholder = {
-                Text(
-                    "제목 없음",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
+                Text("제목 없음", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.40f))
             },
-            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            singleLine = true,
+            textStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            minLines = 1,
+            maxLines = 3,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -2206,291 +2161,204 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "속성",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("속성", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(10.dp))
             Box {
-                TextButton(
-                    onClick = { categoryMenuExpanded = true },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                ) { Text(category.ifBlank { "개인" }) }
-                DropdownMenu(
-                    expanded = categoryMenuExpanded,
-                    onDismissRequest = { categoryMenuExpanded = false }
-                ) {
+                AssistChip(onClick = { categoryMenuExpanded = true }, label = { Text(category.ifBlank { "개인" }) })
+                DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
                     listOf("개인", "업무", "수업", "학생", "회의").forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(item) },
-                            onClick = {
-                                category = item
-                                dirty = true
-                                categoryMenuExpanded = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(item) }, onClick = {
+                            category = item
+                            dirty = true
+                            categoryMenuExpanded = false
+                        })
                     }
                 }
             }
         }
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 6.dp),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
-        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
 
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(0.dp),
-            contentPadding = PaddingValues(bottom = 72.dp)
+            contentPadding = PaddingValues(top = 10.dp, bottom = 88.dp)
         ) {
             items(blocks, key = { it.id }) { block ->
                 val index = blocks.indexOfFirst { it.id == block.id }
-                var blockMenuExpanded by remember(block.id) { mutableStateOf(false) }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    if (block.type == NoteBlockType.TODO) {
+                        Checkbox(
+                            checked = block.checked,
+                            onCheckedChange = { checked ->
+                                blocks = blocks.map { if (it.id == block.id) it.copy(checked = checked) else it }
+                                dirty = true
+                            },
+                            modifier = Modifier.padding(top = 3.dp)
+                        )
+                    }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = Color.Transparent
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Box {
-                            TextButton(
-                                onClick = { blockMenuExpanded = true },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    "⋮⋮",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = blockMenuExpanded,
-                                onDismissRequest = { blockMenuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("위로 이동") },
-                                    enabled = index > 0,
-                                    onClick = {
+                    if (block.type == NoteBlockType.DIVIDER) {
+                        HorizontalDivider(modifier = Modifier.weight(1f).padding(vertical = 22.dp))
+                    } else {
+                        val hint = when (block.type) {
+                            NoteBlockType.LINK -> "링크 붙여넣기"
+                            NoteBlockType.IMAGE -> "이미지 URL"
+                            NoteBlockType.FILE -> "파일 URL 또는 경로"
+                            NoteBlockType.QUOTE -> "인용문"
+                            NoteBlockType.CODE -> "코드"
+                            NoteBlockType.TODO -> "할 일"
+                            NoteBlockType.HEADING1 -> "제목 1"
+                            NoteBlockType.HEADING2 -> "제목 2"
+                            else -> "내용을 입력하거나 / 를 눌러 명령"
+                        }
+                        val prefix = when (block.type) {
+                            NoteBlockType.BULLET -> "•"
+                            NoteBlockType.NUMBER -> index.plus(1).toString() + "."
+                            NoteBlockType.QUOTE -> "│"
+                            else -> ""
+                        }
+                        if (prefix.isNotBlank()) {
+                            Text(prefix, modifier = Modifier.padding(top = 14.dp, end = 6.dp), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        TextField(
+                            value = block.content,
+                            onValueChange = { value ->
+                                when {
+                                    value == "/" -> {
+                                        blocks = blocks.map { if (it.id == block.id) it.copy(content = "") else it }
+                                        slashTargetId = block.id
+                                        addMenuExpanded = true
+                                        dirty = true
+                                    }
+                                    value.contains("\n") -> {
+                                        val split = value.split("\n", limit = 2)
                                         val m = blocks.toMutableList()
-                                        val item = m.removeAt(index)
-                                        m.add(index - 1, item)
+                                        m[index] = block.copy(content = split[0])
+                                        m.add(index + 1, NoteBlock(
+                                            id = java.util.UUID.randomUUID().toString(),
+                                            type = NoteBlockType.TEXT,
+                                            content = split.getOrElse(1) { "" },
+                                            position = index + 1
+                                        ))
                                         blocks = m
                                         dirty = true
-                                        blockMenuExpanded = false
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("아래로 이동") },
-                                    enabled = index >= 0 && index < blocks.lastIndex,
-                                    onClick = {
-                                        val m = blocks.toMutableList()
-                                        val item = m.removeAt(index)
-                                        m.add(index + 1, item)
-                                        blocks = m
+                                    else -> {
+                                        blocks = blocks.map { if (it.id == block.id) it.copy(content = value) else it }
                                         dirty = true
-                                        blockMenuExpanded = false
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("복제") },
-                                    onClick = {
-                                        val m = blocks.toMutableList()
-                                        val copy = block.copy(id = java.util.UUID.randomUUID().toString())
-                                        m.add(index + 1, copy)
-                                        blocks = m
-                                        dirty = true
-                                        blockMenuExpanded = false
-                                    }
-                                )
-                                if (block.content.isNotBlank()) {
-                                    DropdownMenuItem(
-                                        text = { Text("TODO로 보내기") },
-                                        onClick = {
-                                            vm.noteBlockToTodo(block.content, schoolToday().toString())
-                                            blockMenuExpanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("캘린더로 보내기") },
-                                        onClick = {
-                                            vm.noteBlockToCalendar(block.content, schoolToday().toString())
-                                            blockMenuExpanded = false
-                                        }
-                                    )
                                 }
-                                DropdownMenuItem(
-                                    text = { Text("삭제") },
-                                    onClick = {
-                                        blocks = blocks.filterNot { it.id == block.id }
-                                        dirty = true
-                                        blockMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
+                            },
+                            placeholder = { Text(hint, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) },
+                            minLines = 1,
+                            textStyle = when (block.type) {
+                                NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                                NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
+                                else -> MaterialTheme.typography.bodyLarge
+                            },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
-                        if (block.type == NoteBlockType.TODO) {
-                            Checkbox(
-                                checked = block.checked,
-                                onCheckedChange = { checked ->
-                                    blocks = blocks.map {
-                                        if (it.id == block.id) it.copy(checked = checked) else it
-                                    }
-                                    dirty = true
-                                },
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                    Box {
+                        TextButton(onClick = { blockMenuId = block.id }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 8.dp)) {
+                            Text("⋮", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f))
                         }
-
-                        if (block.type == NoteBlockType.DIVIDER) {
-                            HorizontalDivider(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(top = 22.dp, end = 8.dp)
-                            )
-                        } else {
-                            val hint = when (block.type) {
-                                NoteBlockType.LINK -> "https://..."
-                                NoteBlockType.IMAGE -> "이미지 URL"
-                                NoteBlockType.FILE -> "파일 URL 또는 경로"
-                                NoteBlockType.QUOTE -> "인용문"
-                                NoteBlockType.CODE -> "코드"
-                                NoteBlockType.TODO -> "할 일"
-                                else -> "내용을 입력하거나 / 를 눌러 명령"
+                        DropdownMenu(expanded = blockMenuId == block.id, onDismissRequest = { blockMenuId = null }) {
+                            DropdownMenuItem(text = { Text("위로 이동") }, enabled = index > 0, onClick = {
+                                val m = blocks.toMutableList()
+                                val item = m.removeAt(index)
+                                m.add(index - 1, item)
+                                blocks = m
+                                dirty = true
+                                blockMenuId = null
+                            })
+                            DropdownMenuItem(text = { Text("아래로 이동") }, enabled = index >= 0 && index < blocks.lastIndex, onClick = {
+                                val m = blocks.toMutableList()
+                                val item = m.removeAt(index)
+                                m.add(index + 1, item)
+                                blocks = m
+                                dirty = true
+                                blockMenuId = null
+                            })
+                            DropdownMenuItem(text = { Text("복제") }, onClick = {
+                                val m = blocks.toMutableList()
+                                m.add(index + 1, block.copy(id = java.util.UUID.randomUUID().toString()))
+                                blocks = m
+                                dirty = true
+                                blockMenuId = null
+                            })
+                            if (block.content.isNotBlank()) {
+                                DropdownMenuItem(text = { Text("TODO로 보내기") }, onClick = {
+                                    vm.noteBlockToTodo(block.content, schoolToday().toString())
+                                    blockMenuId = null
+                                })
+                                DropdownMenuItem(text = { Text("캘린더로 보내기") }, onClick = {
+                                    vm.noteBlockToCalendar(block.content, schoolToday().toString())
+                                    blockMenuId = null
+                                })
                             }
-                            val prefix = when (block.type) {
-                                NoteBlockType.BULLET -> "•"
-                                NoteBlockType.NUMBER -> "${index + 1}."
-                                NoteBlockType.QUOTE -> "│"
-                                else -> ""
-                            }
-                            if (prefix.isNotBlank()) {
-                                Text(
-                                    prefix,
-                                    modifier = Modifier.padding(top = 14.dp, end = 4.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            TextField(
-                                value = block.content,
-                                onValueChange = { value ->
-                                    when {
-                                        value == "/" -> {
-                                            blocks = blocks.map {
-                                                if (it.id == block.id) it.copy(content = "") else it
-                                            }
-                                            addMenuExpanded = true
-                                            dirty = true
-                                        }
-                                        value.contains("\n") -> {
-                                            val split = value.split("\n", limit = 2)
-                                            val m = blocks.toMutableList()
-                                            m[index] = block.copy(content = split[0])
-                                            m.add(
-                                                index + 1,
-                                                NoteBlock(
-                                                    id = java.util.UUID.randomUUID().toString(),
-                                                    type = NoteBlockType.TEXT,
-                                                    content = split.getOrElse(1) { "" },
-                                                    position = index + 1
-                                                )
-                                            )
-                                            blocks = m
-                                            dirty = true
-                                        }
-                                        else -> {
-                                            blocks = blocks.map {
-                                                if (it.id == block.id) it.copy(content = value) else it
-                                            }
-                                            dirty = true
-                                        }
-                                    }
-                                },
-                                placeholder = {
-                                    Text(
-                                        hint,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                    )
-                                },
-                                minLines = 1,
-                                textStyle = when (block.type) {
-                                    NoteBlockType.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                                    NoteBlockType.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                                    NoteBlockType.CODE -> MaterialTheme.typography.bodyMedium
-                                    else -> MaterialTheme.typography.bodyLarge
-                                },
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+                            DropdownMenuItem(text = { Text("삭제") }, onClick = {
+                                blocks = blocks.filterNot { it.id == block.id }
+                                dirty = true
+                                blockMenuId = null
+                            })
                         }
                     }
                 }
             }
         }
 
-        Row(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
         ) {
-            Box {
-                TextButton(
-                    onClick = { addMenuExpanded = true },
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        "＋  블록 추가",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = addMenuExpanded,
-                    onDismissRequest = { addMenuExpanded = false }
-                ) {
-                    listOf(
-                        NoteBlockType.TEXT to "텍스트",
-                        NoteBlockType.HEADING1 to "제목",
-                        NoteBlockType.HEADING2 to "소제목",
-                        NoteBlockType.TODO to "체크리스트",
-                        NoteBlockType.BULLET to "목록",
-                        NoteBlockType.QUOTE to "인용",
-                        NoteBlockType.CODE to "코드",
-                        NoteBlockType.LINK to "링크",
-                        NoteBlockType.IMAGE to "이미지",
-                        NoteBlockType.FILE to "파일",
-                        NoteBlockType.DIVIDER to "구분선"
-                    ).forEach { (type, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                blocks = blocks + NoteBlock(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    type = type,
-                                    position = blocks.size
-                                )
-                                dirty = true
-                                addMenuExpanded = false
-                            }
-                        )
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    TextButton(onClick = {
+                        slashTargetId = null
+                        addMenuExpanded = true
+                    }) { Text("+  블록 추가") }
+                    DropdownMenu(
+                        expanded = addMenuExpanded,
+                        onDismissRequest = {
+                            addMenuExpanded = false
+                            slashTargetId = null
+                        }
+                    ) {
+                        listOf(
+                            NoteBlockType.TEXT to "텍스트",
+                            NoteBlockType.HEADING1 to "제목 1",
+                            NoteBlockType.HEADING2 to "제목 2",
+                            NoteBlockType.TODO to "체크리스트",
+                            NoteBlockType.BULLET to "글머리 기호",
+                            NoteBlockType.NUMBER to "번호 매기기",
+                            NoteBlockType.QUOTE to "인용",
+                            NoteBlockType.CODE to "코드",
+                            NoteBlockType.LINK to "링크",
+                            NoteBlockType.IMAGE to "이미지",
+                            NoteBlockType.FILE to "파일",
+                            NoteBlockType.DIVIDER to "구분선"
+                        ).forEach { (type, label) ->
+                            DropdownMenuItem(text = { Text(label) }, onClick = { addOrTransformBlock(type) })
+                        }
                     }
                 }
+                Spacer(Modifier.weight(1f))
+                Text("/ 명령", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

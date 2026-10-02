@@ -1,7 +1,7 @@
 {
-  "versionCode": 67,
-  "versionName": "0.3.61",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.61/MilseongJeil-v0.3.61.apk",
-  "sha256": "459ea4333c6274f737aa0a8e157c92f35a6331f3c8e38fd0e3015c25371557c4",
-  "notes": "v0.3.61: 오늘 화면의 고정 메모 개수가 실제 메모 페이지와 다르게 표시되는 문제를 수정했습니다. 실제 고정된 활성 페이지 기준으로 집계하고 앱 시작 시 서버 상태를 안전하게 반영합니다. 계정별 메모 캐시를 분리해 다른 계정의 메모가 섞이지 않도록 했습니다."
+  "versionCode": 68,
+  "versionName": "0.3.62",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.62/MilseongJeil-v0.3.62.apk",
+  "sha256": "da0d0d09709590f6b10349e8acda2aa6ceead3a733813eac6d433c14a7faf2ff",
+  "notes": "v0.3.62: TODO 마감일을 달력에서 선택할 수 있도록 개선했습니다. 날짜 입력란 또는 달력 아이콘을 누르면 날짜 선택창이 열리며, 기존 오늘/내일/다음 주 빠른 선택도 유지됩니다."
 }

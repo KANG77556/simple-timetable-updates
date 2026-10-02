@@ -32,6 +32,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
     private val api = ScerpApi(store)
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
+    private val initialNotePages = run {
+        store.ensureNoteAccount(store.userId)
+        store.loadNotePages()
+    }
     private val initialMemos = store.loadMemos().let { items ->
         val cutoff = System.currentTimeMillis() - trashRetentionMillis
         val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
@@ -44,7 +48,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             profile = UserProfile(store.userId, store.displayName),
             myTimetable = decodeTimetable(store.latestTimetableJson),
             memos = initialMemos,
-            notePages = store.loadNotePages(),
+            notePages = initialNotePages,
             todos = store.loadTodos(),
             calendar = store.loadCalendar(),
             lastLoginId = store.loginId,
@@ -68,11 +72,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(loginId: String, password: String) = viewModelScope.launch(Dispatchers.IO) {
         runTask {
+            val previousUserId = store.userId
             val profile = api.login(loginId, password)
+            store.switchNoteAccount(previousUserId, profile.userId)
             store.userId = profile.userId
             store.displayName = profile.displayName
             store.loginId = loginId.trim()
-            _state.value = _state.value.copy(loggedIn = true, profile = profile)
+            val accountNotes = store.loadNotePages()
+            _state.value = _state.value.copy(
+                loggedIn = true,
+                profile = profile,
+                notePages = accountNotes,
+                pinnedNoteCount = null
+            )
             refreshTodayDirect(profile.userId)
         }
     }

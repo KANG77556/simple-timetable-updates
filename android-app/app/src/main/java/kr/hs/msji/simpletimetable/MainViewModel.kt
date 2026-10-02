@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
+import java.time.YearMonth
 
 data class AppUiState(
     val loading: Boolean = false,
@@ -23,6 +24,8 @@ data class AppUiState(
     val pinnedNoteCount: Int? = null,
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
+    val calendarTimetable: List<TimetableItem> = emptyList(),
+    val calendarTimetableMonth: String = "",
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
     val message: String = ""
@@ -140,6 +143,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!_state.value.loggedIn || _state.value.allTimetable.isNotEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { refreshAllWeekDirect(_state.value.today) }
+        }
+    }
+
+    fun loadCalendarTimetableMonth(month: YearMonth) {
+        if (!_state.value.loggedIn) return
+        val monthKey = month.toString()
+        if (_state.value.calendarTimetableMonth == monthKey && _state.value.calendarTimetable.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val userId = _state.value.profile.userId.ifBlank { store.userId }
+                if (userId.isBlank()) return@runCatching
+                val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
+                val rows = (1..month.lengthOfMonth())
+                    .map { month.atDay(it) }
+                    .filter { it.dayOfWeek.value in 1..5 }
+                    .flatMap { date ->
+                        runCatching {
+                            api.fetchMyTimetable(date.toString(), userId, displayName)
+                        }.getOrDefault(emptyList())
+                    }
+                    .filter { it.subject.isNotBlank() || it.room.isNotBlank() || it.startTime.isNotBlank() }
+                    .distinctBy { "${it.date}-${it.period}-${it.subject}-${it.room}" }
+                    .sortedWith(compareBy<TimetableItem>({ it.date }, { it.period }))
+                _state.value = _state.value.copy(
+                    calendarTimetable = rows,
+                    calendarTimetableMonth = monthKey
+                )
+            }
         }
     }
 

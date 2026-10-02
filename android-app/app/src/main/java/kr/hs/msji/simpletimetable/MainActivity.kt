@@ -2643,29 +2643,36 @@ private fun TodoScreen(state: AppUiState, vm: MainViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = {},
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .heightIn(min = 46.dp)
-                            .clickable { openDueDatePicker() },
-                        singleLine = true,
-                        readOnly = true,
-                        label = { Text("마감") },
-                        placeholder = { Text("날짜 선택") },
-                        isError = date.isNotBlank() && !validDate,
-                        trailingIcon = {
-                            IconButton(onClick = { openDueDatePicker() }) {
+                    ) {
+                        OutlinedTextField(
+                            value = date,
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            readOnly = true,
+                            label = { Text("마감") },
+                            placeholder = { Text("날짜 선택") },
+                            isError = date.isNotBlank() && !validDate,
+                            trailingIcon = {
                                 Icon(
                                     Icons.Filled.DateRange,
-                                    contentDescription = "마감 날짜 달력 열기"
+                                    contentDescription = null
                                 )
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .semantics { contentDescription = "마감 날짜 달력 열기" }
+                                .clickable { openDueDatePicker() }
+                        )
+                    }
                     Spacer(Modifier.width(6.dp))
                     AssistChip(onClick = { date = today.toString() }, label = { Text("오늘") })
                     Spacer(Modifier.width(5.dp))

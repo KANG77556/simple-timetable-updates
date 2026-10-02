@@ -1047,7 +1047,9 @@ private fun TodayScreen(
                             "오늘 업무",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
                         )
                         if (overdueTodos > 0) {
                             Surface(
@@ -2225,7 +2227,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
     var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
     var blocks by remember(selected.id, selected.blocks) {
-        mutableStateOf(selected.blocks.ifEmpty { listOf(NoteBlock(java.util.UUID.randomUUID().toString(), NoteBlockType.TEXT, position = 0)) })
+        mutableStateOf(selected.blocks)
     }
     var dirty by remember(selected.id) { mutableStateOf(false) }
     var topMenuExpanded by remember(selected.id) { mutableStateOf(false) }
@@ -2233,6 +2235,20 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
     var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(selected.id, selected.blocks.isEmpty()) {
+        if (blocks.isEmpty()) {
+            blocks = listOf(
+                NoteBlock(
+                    id = java.util.UUID.randomUUID().toString(),
+                    type = NoteBlockType.TEXT,
+                    position = 0
+                )
+            )
+            dirty = true
+        }
+    }
+
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
@@ -2504,22 +2520,26 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             }
 
             item(key = "add-block-control") {
-                    Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
-            ) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box {
-                        TextButton(onClick = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = {
                             slashTargetId = null
                             addMenuExpanded = true
-                        }) { Text("+  블록 추가") }
+                        },
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                    ) {
+                        Text("+ 블록", style = MaterialTheme.typography.bodyMedium)
                     }
                     Spacer(Modifier.weight(1f))
-                    Text("/ 명령", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "/ 명령",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+                    )
                 }
-            }
             }
         }
 

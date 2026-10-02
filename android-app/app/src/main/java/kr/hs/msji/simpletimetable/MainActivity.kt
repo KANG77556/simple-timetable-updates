@@ -1915,6 +1915,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var query by remember { mutableStateOf("") }
     var pageMenuId by remember { mutableStateOf<String?>(null) }
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
+    var newDraftPageId by remember { mutableStateOf<String?>(null) }
     val selected = state.notePages.firstOrNull { it.id == selectedId }
 
     LaunchedEffect(Unit) {
@@ -1965,6 +1966,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             syncState = "LOCAL"
                         )
                         vm.saveNotePage(page)
+                        newDraftPageId = page.id
                         selectedId = page.id
                     },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
@@ -2058,7 +2060,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     syncState = "LOCAL"
                                 )
                                 vm.saveNotePage(page)
-                                selectedId = page.id
+                                newDraftPageId = page.id
+                        selectedId = page.id
                             }
                         ) {
                             Text("새 페이지")
@@ -2288,7 +2291,15 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(
                 onClick = {
-                    if (dirty) {
+                    val untouchedNewDraft =
+                        newDraftPageId == selected.id &&
+                        title.isBlank() &&
+                        blocks.all { it.content.isBlank() && !it.checked }
+
+                    if (untouchedNewDraft) {
+                        vm.archiveNotePage(selected.id)
+                        newDraftPageId = null
+                    } else if (dirty) {
                         dirty = false
                         savePage()
                     }
@@ -2336,6 +2347,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             value = title,
             onValueChange = {
                 title = it
+                if (it.isNotBlank()) newDraftPageId = null
                 dirty = true
             },
             placeholder = {
@@ -2391,6 +2403,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             checked = block.checked,
                             onCheckedChange = { checked ->
                                 blocks = blocks.map { if (it.id == block.id) it.copy(checked = checked) else it }
+                                if (checked) newDraftPageId = null
                                 dirty = true
                             },
                             modifier = Modifier.padding(top = 3.dp)
@@ -2446,6 +2459,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     }
                                     else -> {
                                         blocks = blocks.map { if (it.id == block.id) it.copy(content = value) else it }
+                                        if (value.isNotBlank()) newDraftPageId = null
                                         dirty = true
                                     }
                                 }

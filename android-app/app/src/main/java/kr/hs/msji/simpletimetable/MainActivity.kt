@@ -1916,6 +1916,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var query by remember { mutableStateOf("") }
     var pageMenuId by remember { mutableStateOf<String?>(null) }
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
+    var multiSelectMode by remember { mutableStateOf(false) }
+    var selectedPageIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingBulkDelete by remember { mutableStateOf(false) }
     var newDraftPageId by remember { mutableStateOf<String?>(null) }
     val selected = state.notePages.firstOrNull { it.id == selectedId }
 
@@ -1935,44 +1938,81 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(
-                    enabled = state.loggedIn && !state.loading,
-                    onClick = { vm.refreshNotes() },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                ) {
+                if (multiSelectMode) {
                     Text(
-                        if (state.loading) "동기화 중…" else "동기화",
-                        style = MaterialTheme.typography.labelLarge
+                        selectedPageIds.size.toString() + "개 선택",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                FilledTonalButton(
-                    enabled = !state.loading,
-                    modifier = Modifier.semantics { contentDescription = "새 페이지" },
-                    onClick = {
-                        val now = java.time.Instant.now().toString()
-                        val page = NotePage(
-                            id = java.util.UUID.randomUUID().toString(),
-                            title = "",
-                            category = "개인",
-                            version = 0,
-                            createdAt = now,
-                            updatedAt = now,
-                            blocks = listOf(
-                                NoteBlock(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    type = NoteBlockType.TEXT,
-                                    position = 0
-                                )
-                            ),
-                            syncState = "LOCAL"
+                    TextButton(
+                        onClick = {
+                            val allIds = state.notePages.filterNot { it.archived }.map { it.id }.toSet()
+                            selectedPageIds = if (selectedPageIds.size == allIds.size) emptySet() else allIds
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("전체")
+                    }
+                    TextButton(
+                        onClick = {
+                            multiSelectMode = false
+                            selectedPageIds = emptySet()
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("취소")
+                    }
+                } else {
+                    TextButton(
+                        enabled = state.loggedIn && !state.loading,
+                        onClick = { vm.refreshNotes() },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            if (state.loading) "동기화 중…" else "동기화",
+                            style = MaterialTheme.typography.labelLarge
                         )
-                        vm.saveNotePage(page)
-                        newDraftPageId = page.id
-                        selectedId = page.id
-                    },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text("+")
+                    }
+                    TextButton(
+                        enabled = state.notePages.any { !it.archived },
+                        onClick = {
+                            multiSelectMode = true
+                            selectedPageIds = emptySet()
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("선택")
+                    }
+                    FilledTonalButton(
+                        enabled = !state.loading,
+                        modifier = Modifier.semantics { contentDescription = "새 페이지" },
+                        onClick = {
+                            val now = java.time.Instant.now().toString()
+                            val page = NotePage(
+                                id = java.util.UUID.randomUUID().toString(),
+                                title = "",
+                                category = "개인",
+                                version = 0,
+                                createdAt = now,
+                                updatedAt = now,
+                                blocks = listOf(
+                                    NoteBlock(
+                                        id = java.util.UUID.randomUUID().toString(),
+                                        type = NoteBlockType.TEXT,
+                                        position = 0
+                                    )
+                                ),
+                                syncState = "LOCAL"
+                            )
+                            vm.saveNotePage(page)
+                            newDraftPageId = page.id
+                            selectedId = page.id
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text("+")
+                    }
                 }
             }
 
@@ -2091,11 +2131,28 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (multiSelectMode) {
+                                Checkbox(
+                                    checked = page.id in selectedPageIds,
+                                    onCheckedChange = { checked ->
+                                        selectedPageIds = if (checked) selectedPageIds + page.id else selectedPageIds - page.id
+                                    }
+                                )
+                            }
+
                             TextButton(
                                 onClick = {
-                                    selectedId = page.id
-                                    if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
-                                        vm.openNotePage(page.id)
+                                    if (multiSelectMode) {
+                                        selectedPageIds = if (page.id in selectedPageIds) {
+                                            selectedPageIds - page.id
+                                        } else {
+                                            selectedPageIds + page.id
+                                        }
+                                    } else {
+                                        selectedId = page.id
+                                        if (state.loggedIn && page.syncState == "SYNCED" && page.blocks.isEmpty()) {
+                                            vm.openNotePage(page.id)
+                                        }
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -2164,25 +2221,27 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                 )
                             }
 
-                            Box {
-                                IconButton(onClick = { pageMenuId = page.id }) {
-                                    Icon(
-                                        Icons.Filled.MoreVert,
-                                        contentDescription = "${page.title.ifBlank { "제목 없음" }} 페이지 더보기"
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = pageMenuId == page.id,
-                                    onDismissRequest = { pageMenuId = null }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("삭제") },
-                                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                                        onClick = {
-                                            pageMenuId = null
-                                            pendingDeletePage = page
-                                        }
-                                    )
+                            if (!multiSelectMode) {
+                                Box {
+                                    IconButton(onClick = { pageMenuId = page.id }) {
+                                        Icon(
+                                            Icons.Filled.MoreVert,
+                                            contentDescription = "${page.title.ifBlank { "제목 없음" }} 페이지 더보기"
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = pageMenuId == page.id,
+                                        onDismissRequest = { pageMenuId = null }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("삭제") },
+                                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                                            onClick = {
+                                                pageMenuId = null
+                                                pendingDeletePage = page
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2193,6 +2252,57 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         )
                     }
                 }
+            }
+
+            if (multiSelectMode) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    tonalElevation = 2.dp,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            selectedPageIds.size.toString() + "개 선택됨",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(
+                            enabled = selectedPageIds.isNotEmpty(),
+                            onClick = { pendingBulkDelete = true }
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("삭제")
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+            }
+
+            if (pendingBulkDelete) {
+                AlertDialog(
+                    onDismissRequest = { pendingBulkDelete = false },
+                    title = { Text("선택한 페이지 삭제") },
+                    text = { Text(selectedPageIds.size.toString() + "개 페이지를 삭제할까요?") },
+                    dismissButton = {
+                        TextButton(onClick = { pendingBulkDelete = false }) { Text("취소") }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                selectedPageIds.forEach { vm.archiveNotePage(it) }
+                                pendingBulkDelete = false
+                                multiSelectMode = false
+                                selectedPageIds = emptySet()
+                            }
+                        ) {
+                            Text("삭제", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
             }
 
             pendingDeletePage?.let { page ->

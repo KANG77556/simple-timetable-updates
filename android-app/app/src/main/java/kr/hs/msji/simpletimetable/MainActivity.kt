@@ -2236,19 +2236,6 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
     var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(selected.id, selected.blocks.isEmpty()) {
-        if (blocks.isEmpty()) {
-            blocks = listOf(
-                NoteBlock(
-                    id = java.util.UUID.randomUUID().toString(),
-                    type = NoteBlockType.TEXT,
-                    position = 0
-                )
-            )
-            dirty = true
-        }
-    }
-
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
 

@@ -9,10 +9,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.concurrent.ConcurrentHashMap
 
 data class AppUiState(
     val loading: Boolean = false,
@@ -41,6 +44,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
     @Volatile private var calendarTimetableRequestKey: String = ""
     private var calendarTimetableJob: Job? = null
+    private val noteMutationLocks = ConcurrentHashMap<String, Mutex>()
     private val initialNotePages = run {
         store.ensureNoteAccount(store.userId)
         store.loadNotePages()
@@ -331,48 +335,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveNotePage(page: NotePage) = viewModelScope.launch(Dispatchers.IO) {
-        val pending = page.copy(syncState = "PENDING")
-        val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
-            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
-        store.saveNotePages(local)
-        _state.value = _state.value.copy(
-            notePages = local,
-            pinnedNoteCount = local.count { it.pinned && !it.archived }
-        )
-        runTask {
-            val saved = api.saveNote(pending)
-            val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
+        val lock = noteMutationLocks.computeIfAbsent(page.id) { Mutex() }
+        lock.withLock {
+            val pending = page.copy(syncState = "PENDING")
+            val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
                 .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+            store.saveNotePages(local)
+            _state.value = _state.value.copy(
+                notePages = local,
+                pinnedNoteCount = local.count { it.pinned && !it.archived }
+            )
+            runTask {
+                val saved = api.saveNote(pending)
+                val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
+                    .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+                store.saveNotePages(next)
+                _state.value = _state.value.copy(
+                    notePages = next,
+                    pinnedNoteCount = next.count { it.pinned && !it.archived }
+                )
+            }
+            if (_state.value.message.isNotBlank()) {
+                val failed = _state.value.notePages.map {
+                    if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
+                }
+                store.saveNotePages(failed)
+                _state.value = _state.value.copy(
+                    notePages = failed,
+                    pinnedNoteCount = failed.count { it.pinned && !it.archived }
+                )
+            }
+        }
+    }
+
+    fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        val lock = noteMutationLocks.computeIfAbsent(id) { Mutex() }
+        lock.withLock {
+            val next = _state.value.notePages.filterNot { it.id == id }
+            store.markNoteDeleted(id)
             store.saveNotePages(next)
             _state.value = _state.value.copy(
                 notePages = next,
                 pinnedNoteCount = next.count { it.pinned && !it.archived }
             )
-        }
-        if (_state.value.message.isNotBlank()) {
-            val failed = _state.value.notePages.map {
-                if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
+            runTask {
+                api.archiveNote(id)
             }
-            store.saveNotePages(failed)
-            _state.value = _state.value.copy(
-                notePages = failed,
-                pinnedNoteCount = failed.count { it.pinned && !it.archived }
-            )
         }
+        noteMutationLocks.remove(id, lock)
     }
 
-    fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
-        val next = _state.value.notePages.filterNot { it.id == id }
-        store.markNoteDeleted(id)
-        store.saveNotePages(next)
-        _state.value = _state.value.copy(
-            notePages = next,
-            pinnedNoteCount = next.count { it.pinned && !it.archived }
-        )
-        runTask {
-            api.archiveNote(id)
-        }
-    }
     fun addMemo(
         text: String,
         category: String = "일반",

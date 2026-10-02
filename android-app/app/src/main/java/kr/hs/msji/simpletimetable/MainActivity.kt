@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -1915,6 +1916,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var query by remember { mutableStateOf("") }
     var pageMenuId by remember { mutableStateOf<String?>(null) }
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
+    var newDraftPageId by remember { mutableStateOf<String?>(null) }
     val selected = state.notePages.firstOrNull { it.id == selectedId }
 
     LaunchedEffect(Unit) {
@@ -1965,6 +1967,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             syncState = "LOCAL"
                         )
                         vm.saveNotePage(page)
+                        newDraftPageId = page.id
                         selectedId = page.id
                     },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
@@ -2058,7 +2061,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     syncState = "LOCAL"
                                 )
                                 vm.saveNotePage(page)
-                                selectedId = page.id
+                                newDraftPageId = page.id
+                        selectedId = page.id
                             }
                         ) {
                             Text("새 페이지")
@@ -2247,6 +2251,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
     var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
+    val draftCleanupStarted = remember(selected.id) { java.util.concurrent.atomic.AtomicBoolean(false) }
 
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
@@ -2260,6 +2265,41 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 blocks = blocks.mapIndexed { index, block -> block.copy(position = index) }
             )
         )
+    }
+
+    fun exitMemoEditor() {
+        val untouchedNewDraft =
+            newDraftPageId == selected.id &&
+            title.isBlank() &&
+            blocks.all { it.content.isBlank() && !it.checked }
+
+        if (untouchedNewDraft && draftCleanupStarted.compareAndSet(false, true)) {
+            vm.archiveNotePage(selected.id)
+            newDraftPageId = null
+        } else if (dirty) {
+            dirty = false
+            savePage()
+        }
+        selectedId = null
+    }
+
+    BackHandler(enabled = selectedId != null) {
+        exitMemoEditor()
+    }
+
+    val latestDraftId by rememberUpdatedState(newDraftPageId)
+    val latestTitle by rememberUpdatedState(title)
+    val latestBlocks by rememberUpdatedState(blocks)
+    DisposableEffect(selected.id) {
+        onDispose {
+            val untouchedNewDraft =
+                latestDraftId == selected.id &&
+                latestTitle.isBlank() &&
+                latestBlocks.all { it.content.isBlank() && !it.checked }
+            if (untouchedNewDraft && draftCleanupStarted.compareAndSet(false, true)) {
+                vm.archiveNotePage(selected.id)
+            }
+        }
     }
 
     fun addOrTransformBlock(type: NoteBlockType) {
@@ -2287,13 +2327,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(
-                onClick = {
-                    if (dirty) {
-                        dirty = false
-                        savePage()
-                    }
-                    selectedId = null
-                },
+                onClick = { exitMemoEditor() },
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
             ) { Text("‹  메모") }
 
@@ -2336,6 +2370,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             value = title,
             onValueChange = {
                 title = it
+                if (it.isNotBlank()) newDraftPageId = null
                 dirty = true
             },
             placeholder = {
@@ -2391,6 +2426,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             checked = block.checked,
                             onCheckedChange = { checked ->
                                 blocks = blocks.map { if (it.id == block.id) it.copy(checked = checked) else it }
+                                if (checked) newDraftPageId = null
                                 dirty = true
                             },
                             modifier = Modifier.padding(top = 3.dp)
@@ -2446,6 +2482,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                     }
                                     else -> {
                                         blocks = blocks.map { if (it.id == block.id) it.copy(content = value) else it }
+                                        if (value.isNotBlank()) newDraftPageId = null
                                         dirty = true
                                     }
                                 }

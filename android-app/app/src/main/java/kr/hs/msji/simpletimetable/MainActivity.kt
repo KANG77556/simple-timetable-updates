@@ -2056,6 +2056,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var blockMenuId by remember(selected.id) { mutableStateOf<String?>(null) }
     var slashTargetId by remember(selected.id) { mutableStateOf<String?>(null) }
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
     fun savePage() {
         vm.saveNotePage(
@@ -2161,21 +2163,25 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("속성", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.width(10.dp))
-            Box {
-                AssistChip(onClick = { categoryMenuExpanded = true }, label = { Text(category.ifBlank { "개인" }) })
-                DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
-                    listOf("개인", "업무", "수업", "학생", "회의").forEach { item ->
-                        DropdownMenuItem(text = { Text(item) }, onClick = {
-                            category = item
-                            dirty = true
-                            categoryMenuExpanded = false
-                        })
+        if (!imeVisible) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("속성", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(10.dp))
+                Box {
+                    AssistChip(onClick = { categoryMenuExpanded = true }, label = { Text(category.ifBlank { "개인" }) })
+                    DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                        listOf("개인", "업무", "수업", "학생", "회의").forEach { item ->
+                            DropdownMenuItem(text = { Text(item) }, onClick = {
+                                category = item
+                                dirty = true
+                                categoryMenuExpanded = false
+                            })
+                        }
                     }
                 }
             }
+    
+    
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
@@ -2183,7 +2189,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(0.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 88.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = if (imeVisible) 20.dp else 36.dp)
         ) {
             items(blocks, key = { it.id }) { block ->
                 val index = blocks.indexOfFirst { it.id == block.id }
@@ -2319,46 +2325,51 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     }
                 }
             }
+
+            item(key = "add-block-control") {
+                    Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        TextButton(onClick = {
+                            slashTargetId = null
+                            addMenuExpanded = true
+                        }) { Text("+  블록 추가") }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("/ 명령", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            }
         }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
-        ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box {
-                    TextButton(onClick = {
-                        slashTargetId = null
-                        addMenuExpanded = true
-                    }) { Text("+  블록 추가") }
-                    DropdownMenu(
-                        expanded = addMenuExpanded,
-                        onDismissRequest = {
-                            addMenuExpanded = false
-                            slashTargetId = null
-                        }
-                    ) {
-                        listOf(
-                            NoteBlockType.TEXT to "텍스트",
-                            NoteBlockType.HEADING1 to "제목 1",
-                            NoteBlockType.HEADING2 to "제목 2",
-                            NoteBlockType.TODO to "체크리스트",
-                            NoteBlockType.BULLET to "글머리 기호",
-                            NoteBlockType.NUMBER to "번호 매기기",
-                            NoteBlockType.QUOTE to "인용",
-                            NoteBlockType.CODE to "코드",
-                            NoteBlockType.LINK to "링크",
-                            NoteBlockType.IMAGE to "이미지",
-                            NoteBlockType.FILE to "파일",
-                            NoteBlockType.DIVIDER to "구분선"
-                        ).forEach { (type, label) ->
-                            DropdownMenuItem(text = { Text(label) }, onClick = { addOrTransformBlock(type) })
-                        }
-                    }
+        Box(modifier = Modifier.size(1.dp)) {
+            DropdownMenu(
+                expanded = addMenuExpanded,
+                onDismissRequest = {
+                    addMenuExpanded = false
+                    slashTargetId = null
                 }
-                Spacer(Modifier.weight(1f))
-                Text("/ 명령", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ) {
+                listOf(
+                    NoteBlockType.TEXT to "텍스트",
+                    NoteBlockType.HEADING1 to "제목 1",
+                    NoteBlockType.HEADING2 to "제목 2",
+                    NoteBlockType.TODO to "체크리스트",
+                    NoteBlockType.BULLET to "글머리 기호",
+                    NoteBlockType.NUMBER to "번호 매기기",
+                    NoteBlockType.QUOTE to "인용",
+                    NoteBlockType.CODE to "코드",
+                    NoteBlockType.LINK to "링크",
+                    NoteBlockType.IMAGE to "이미지",
+                    NoteBlockType.FILE to "파일",
+                    NoteBlockType.DIVIDER to "구분선"
+                ).forEach { (type, label) ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { addOrTransformBlock(type) })
+                }
             }
         }
     }

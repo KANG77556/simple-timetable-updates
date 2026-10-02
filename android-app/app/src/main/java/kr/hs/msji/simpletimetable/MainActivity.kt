@@ -1927,6 +1927,16 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     }
 
     if (selectedId == null) {
+        val pages = state.notePages
+            .filterNot { it.archived }
+            .filter {
+                query.isBlank() ||
+                    it.title.contains(query.trim(), ignoreCase = true) ||
+                    it.category.contains(query.trim(), ignoreCase = true) ||
+                    it.blocks.any { b -> b.content.contains(query.trim(), ignoreCase = true) }
+            }
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -1947,8 +1957,13 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     )
                     TextButton(
                         onClick = {
-                            val allIds = state.notePages.filterNot { it.archived }.map { it.id }.toSet()
-                            selectedPageIds = if (selectedPageIds.size == allIds.size) emptySet() else allIds
+                            val visibleIds = pages.map { it.id }.toSet()
+                            val allVisibleSelected = visibleIds.isNotEmpty() && visibleIds.all { it in selectedPageIds }
+                            selectedPageIds = if (allVisibleSelected) {
+                                selectedPageIds - visibleIds
+                            } else {
+                                selectedPageIds + visibleIds
+                            }
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
@@ -2042,16 +2057,6 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             )
 
             Spacer(Modifier.height(4.dp))
-
-            val pages = state.notePages
-                .filterNot { it.archived }
-                .filter {
-                    query.isBlank() ||
-                        it.title.contains(query.trim(), ignoreCase = true) ||
-                        it.category.contains(query.trim(), ignoreCase = true) ||
-                        it.blocks.any { b -> b.content.contains(query.trim(), ignoreCase = true) }
-                }
-                .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
 
             if (pages.isEmpty()) {
                 Column(
@@ -2293,7 +2298,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                selectedPageIds.forEach { vm.archiveNotePage(it) }
+                                vm.archiveNotePages(selectedPageIds)
                                 pendingBulkDelete = false
                                 multiSelectMode = false
                                 selectedPageIds = emptySet()

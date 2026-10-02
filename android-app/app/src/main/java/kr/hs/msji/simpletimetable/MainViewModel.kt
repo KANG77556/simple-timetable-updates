@@ -20,6 +20,7 @@ data class AppUiState(
     val allTimetable: List<TimetableItem> = emptyList(),
     val memos: List<MemoItem> = emptyList(),
     val notePages: List<NotePage> = emptyList(),
+    val pinnedNoteCount: Int? = null,
     val todos: List<TodoItem> = emptyList(),
     val calendar: List<CalendarItem> = emptyList(),
     val classrooms: List<Classroom> = emptyList(),
@@ -160,7 +161,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun preloadNotes() {
         if (!_state.value.loggedIn) return
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { refreshNotesDirect() }
+            runCatching {
+                val remote = api.fetchNotePages()
+                _state.value = _state.value.copy(
+                    pinnedNoteCount = remote.count { it.pinned && !it.archived }
+                )
+            }
         }
     }
 
@@ -179,7 +185,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .distinctBy { it.id }
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
         store.saveNotePages(merged)
-        _state.value = _state.value.copy(notePages = merged)
+        _state.value = _state.value.copy(
+            notePages = merged,
+            pinnedNoteCount = merged.count { it.pinned && !it.archived }
+        )
     }
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -196,20 +205,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val local = (_state.value.notePages.filterNot { it.id == page.id } + pending)
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
         store.saveNotePages(local)
-        _state.value = _state.value.copy(notePages = local)
+        _state.value = _state.value.copy(
+            notePages = local,
+            pinnedNoteCount = local.count { it.pinned && !it.archived }
+        )
         runTask {
             val saved = api.saveNote(pending)
             val next = (_state.value.notePages.filterNot { it.id == saved.id } + saved)
                 .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
             store.saveNotePages(next)
-            _state.value = _state.value.copy(notePages = next)
+            _state.value = _state.value.copy(
+                notePages = next,
+                pinnedNoteCount = next.count { it.pinned && !it.archived }
+            )
         }
         if (_state.value.message.isNotBlank()) {
             val failed = _state.value.notePages.map {
                 if (it.id == page.id && it.syncState == "PENDING") it.copy(syncState = "FAILED") else it
             }
             store.saveNotePages(failed)
-            _state.value = _state.value.copy(notePages = failed)
+            _state.value = _state.value.copy(
+                notePages = failed,
+                pinnedNoteCount = failed.count { it.pinned && !it.archived }
+            )
         }
     }
 
@@ -217,7 +235,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val next = _state.value.notePages.filterNot { it.id == id }
         store.markNoteDeleted(id)
         store.saveNotePages(next)
-        _state.value = _state.value.copy(notePages = next)
+        _state.value = _state.value.copy(
+            notePages = next,
+            pinnedNoteCount = next.count { it.pinned && !it.archived }
+        )
         runTask {
             api.archiveNote(id)
         }

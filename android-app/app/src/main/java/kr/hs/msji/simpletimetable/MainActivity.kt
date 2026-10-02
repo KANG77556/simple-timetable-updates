@@ -1031,7 +1031,7 @@ private fun TodayScreen(
             }
             val todayTodos = activeTodos.count { it.dueDate == todayKey }
             val todayEvents = state.calendar.count { it.date == todayKey }
-            val pinnedMemos = countPinnedActiveNotePages(state.notePages)
+            val pinnedMemos = state.pinnedNoteCount ?: countPinnedActiveNotePages(state.notePages)
 
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),

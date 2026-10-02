@@ -48,6 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -1940,6 +1942,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 }
                 FilledTonalButton(
                     enabled = !state.loading,
+                    modifier = Modifier.semantics { contentDescription = "새 페이지" },
                     onClick = {
                         val now = java.time.Instant.now().toString()
                         val page = NotePage(

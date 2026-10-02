@@ -92,17 +92,20 @@ jobs:
           RELEASE_APK="MilseongJeil-v$VERSION_NAME.apk"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists. Refusing to publish mismatched metadata."
-            exit 1
+            echo "Release $TAG already exists; recovering metadata from the published asset."
+            mkdir -p existing-release
+            gh release download "$TAG" --pattern "$RELEASE_APK" --dir existing-release
+            test -f "existing-release/$RELEASE_APK"
+            SHA256="$(sha256sum "existing-release/$RELEASE_APK" | awk '{print $1}')"
+          else
+            cp "$APK" "$RELEASE_APK"
+            SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
+
+            gh release create "$TAG" "$RELEASE_APK" \
+              --target "$GITHUB_SHA" \
+              --title "MilseongJeil-Android-v$VERSION_NAME" \
+              --notes "v$VERSION_NAME: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
           fi
-
-          cp "$APK" "$RELEASE_APK"
-          SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
-
-          gh release create "$TAG" "$RELEASE_APK" \
-            --target "$GITHUB_SHA" \
-            --title "MilseongJeil-Android-v$VERSION_NAME" \
-            --notes "v$VERSION_NAME: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
 
           cat > ../android-latest.json <<EOF
           {
@@ -122,5 +125,18 @@ jobs:
             echo "android-latest.json is already current."
           else
             git commit -m "release: publish Android v$VERSION_NAME update metadata"
-            git push origin HEAD:main
+            published=false
+            for attempt in 1 2 3; do
+              git fetch origin main
+              if ! git rebase origin/main; then
+                git rebase --abort || true
+                exit 1
+              fi
+              if git push origin HEAD:main; then
+                published=true
+                break
+              fi
+              sleep 2
+            done
+            test "$published" = true
           fi

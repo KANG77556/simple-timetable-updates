@@ -47,28 +47,35 @@ class TodayDatePickerLayoutTest {
     private fun assertActionsFit(height: Int) {
         val dialog = compose.onNode(isDialog()).getUnclippedBoundsInRoot()
         assertTrue("dialog must fit short viewport: $dialog", dialog.height <= (height - 48).dp)
-        compose.onNodeWithText("확인").assertIsDisplayed()
-        compose.onNodeWithText("취소").assertIsDisplayed()
+        listOf("확인", "취소").forEach { label ->
+            val action = compose.onNodeWithText(label).assertIsDisplayed().getUnclippedBoundsInRoot()
+            assertTrue("$label must be fully inside dialog: $action / $dialog",
+                action.left >= dialog.left && action.right <= dialog.right &&
+                    action.top >= dialog.top && action.bottom <= dialog.bottom)
+        }
     }
 
     @Test fun landscape_six_rows_keep_confirm_accessible_and_last_day_selectable() {
         show(LocalDate.of(2026, 8, 1))
         assertActionsFit(320)
         compose.onNodeWithText("31").performScrollTo().performTouchInput { click() }
-        compose.onNodeWithText("확인").performClick()
+        compose.onNodeWithText("확인").performTouchInput { click() }
         compose.runOnIdle { assertEquals(LocalDate.of(2026, 8, 31), confirmed) }
     }
 
     @Test fun large_font_on_short_screen_keeps_cancel_and_confirm_accessible() {
         show(LocalDate.of(2026, 8, 1), height = 280, fontScale = 2f)
         assertActionsFit(280)
-        compose.onNodeWithText("취소").performClick()
-        compose.runOnIdle { assertTrue(dismissed); assertNull(confirmed) }
+        val dayText = compose.onNodeWithText("31", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("fontScale=2 must reach dialog text: $dayText", dayText.height >= 32.dp)
+        compose.onNodeWithText("확인").performTouchInput { click() }
+        compose.runOnIdle { assertEquals(LocalDate.of(2026, 8, 1), confirmed) }
+        compose.onNodeWithText("취소").performTouchInput { click() }
+        compose.runOnIdle { assertTrue(dismissed) }
     }
 
     @Test fun full_cell_is_at_least_48dp_even_on_narrow_screens() {
         show(LocalDate.of(2026, 10, 1), height = 800, width = 320)
-        compose.onNodeWithText("3").performScrollTo()
         val day = compose.onNodeWithText("3").getUnclippedBoundsInRoot()
         assertTrue("day width must be at least 48dp: $day", day.width >= 48.dp)
         assertTrue("day height must be at least 48dp: $day", day.height >= 48.dp)
@@ -77,8 +84,8 @@ class TodayDatePickerLayoutTest {
     @Test fun holiday_label_tap_selects_date() {
         show(LocalDate.of(2026, 10, 1), height = 800)
         compose.onNodeWithText("개천절", useUnmergedTree = true)
-            .performScrollTo().performTouchInput { click() }
-        compose.onNodeWithText("확인").performClick()
+            .performTouchInput { click() }
+        compose.onNodeWithText("확인").performTouchInput { click() }
         compose.runOnIdle { assertEquals(LocalDate.of(2026, 10, 3), confirmed) }
     }
 
@@ -88,7 +95,7 @@ class TodayDatePickerLayoutTest {
         compose.onNodeWithText("2026년 11월").assertIsDisplayed()
         compose.onNodeWithContentDescription("이전 달").performClick()
         compose.onNodeWithText("개천절", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("확인").performClick()
+        compose.onNodeWithText("확인").performTouchInput { click() }
         compose.runOnIdle { assertEquals(LocalDate.of(2026, 10, 3), confirmed) }
     }
 }

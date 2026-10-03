@@ -1287,7 +1287,7 @@ private fun TodayWorkSummary(
         ) {
             Text(
                 value,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )

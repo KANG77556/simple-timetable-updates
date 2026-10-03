@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 오늘 화면을 한 단계 더 압축했습니다. 공휴일명은 날짜 버튼 안에 배지로 표시하고, 공휴일 수업 없음 카드는 한 줄로 단순화했으며 오늘 업무 카드와 하단 내비게이션 높이도 줄였습니다."
+              --notes "v$VERSION_NAME: 오늘 화면의 공휴일 중복 표시를 줄이고 오늘 업무를 한 줄형으로 압축했습니다. 아래 빈 공간에는 다음 일정과 다음 TODO를 자동으로 보여줘 바로 이동할 수 있습니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 오늘 화면을 한 단계 더 압축했습니다. 공휴일명은 날짜 버튼 안에 배지로 표시하고, 공휴일 수업 없음 카드는 한 줄로 단순화했으며 오늘 업무 카드와 하단 내비게이션 높이도 줄였습니다."
+            "notes": "v$VERSION_NAME: 오늘 화면의 공휴일 중복 표시를 줄이고 오늘 업무를 한 줄형으로 압축했습니다. 아래 빈 공간에는 다음 일정과 다음 TODO를 자동으로 보여줘 바로 이동할 수 있습니다."
           }
           EOF
 

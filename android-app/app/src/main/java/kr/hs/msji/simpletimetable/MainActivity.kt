@@ -2097,7 +2097,6 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var categoryFilter by remember { mutableStateOf("전체") }
-    var pageMenuId by remember { mutableStateOf<String?>(null) }
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
     var multiSelectMode by remember { mutableStateOf(false) }
     var selectedPageIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -2454,38 +2453,14 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                         }
                                     )
                                 }
-                                Box {
-                                    IconButton(onClick = { pageMenuId = page.id }) {
-                                        Icon(
-                                            Icons.Filled.MoreVert,
-                                            contentDescription = "${page.title.ifBlank { "제목 없음" }} 페이지 더보기"
-                                        )
-                                    }
-                                    DropdownMenu(
-                                        expanded = pageMenuId == page.id,
-                                        onDismissRequest = { pageMenuId = null }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(if (page.pinned) "고정 해제" else "고정") },
-                                            onClick = {
-                                                pageMenuId = null
-                                                vm.saveNotePage(
-                                                    page.copy(
-                                                        pinned = !page.pinned,
-                                                        updatedAt = java.time.Instant.now().toString()
-                                                    )
-                                                )
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("삭제") },
-                                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                                            onClick = {
-                                                pageMenuId = null
-                                                pendingDeletePage = page
-                                            }
-                                        )
-                                    }
+                                IconButton(
+                                    onClick = { pendingDeletePage = page }
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "${page.title.ifBlank { "제목 없음" }} 페이지 삭제",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         }

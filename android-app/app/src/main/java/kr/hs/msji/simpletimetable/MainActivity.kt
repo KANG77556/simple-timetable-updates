@@ -149,6 +149,11 @@ enum class AppThemeMode(val label: String) {
     SYSTEM("시스템"), LIGHT("라이트"), DARK("다크")
 }
 
+internal const val COMPACT_BOTTOM_NAV_HEIGHT_DP = 72
+
+internal fun bottomNavigationTotalHeightDp(bottomInsetDp: Int): Int =
+    COMPACT_BOTTOM_NAV_HEIGHT_DP + bottomInsetDp.coerceAtLeast(0)
+
 @Composable
 private fun AppTabIcon(tab: AppTab) {
     val image = when (tab) {
@@ -238,19 +243,31 @@ fun SimpleTimetableApp(
             )
         },
         bottomBar = {
-            NavigationBar(modifier = Modifier.height(72.dp)) {
-                AppTab.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = tab == item,
-                        onClick = {
-                            globalSearch = false
-                            showSettings = false
-                            tab = item
-                        },
-                        icon = { AppTabIcon(item) },
-                        label = { Text(item.label) }
-                    )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(NavigationBarDefaults.containerColor)
+            ) {
+                NavigationBar(
+                    modifier = Modifier.height(COMPACT_BOTTOM_NAV_HEIGHT_DP.dp),
+                    windowInsets = NavigationBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal)
+                ) {
+                    AppTab.entries.forEach { item ->
+                        NavigationBarItem(
+                            selected = tab == item,
+                            onClick = {
+                                globalSearch = false
+                                showSettings = false
+                                tab = item
+                            },
+                            icon = { AppTabIcon(item) },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
+                Spacer(
+                    modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars)
+                )
             }
         }
     ) { padding ->

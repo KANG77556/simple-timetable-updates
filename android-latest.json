@@ -1,7 +1,7 @@
 {
-  "versionCode": 73,
-  "versionName": "0.3.67",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.67/MilseongJeil-v0.3.67.apk",
-  "sha256": "d0b1f0bd1603f2593e1d93080e9ceb449a08f78aef22255517753ba2c6ab76a3",
-  "notes": "v0.3.67: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
+  "versionCode": 74,
+  "versionName": "0.3.68",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.68/MilseongJeil-v0.3.68.apk",
+  "sha256": "b9b769f0b29e7ba3285cc58d49c41b13986cf83e47efc71dd2dbeb3de42ebb51",
+  "notes": "v0.3.68: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
 }

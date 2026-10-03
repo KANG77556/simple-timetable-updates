@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,7 +91,8 @@ internal fun TimetableDatePickerDialog(
     val weekdays = listOf("일", "월", "화", "수", "목", "금", "토")
 
     val configuration = LocalConfiguration.current
-    val fontScale = LocalDensity.current.fontScale
+    val density = LocalDensity.current
+    val fontScale = density.fontScale
     val maxDialogHeight = (configuration.screenHeightDp - 48).coerceAtLeast(48).dp
     val maxDialogWidth = (configuration.screenWidthDp - 24).coerceIn(48, 420).dp
     val minimumGridWidth = (7 * maxOf(48f, 24f * fontScale + 2f)).dp
@@ -99,147 +101,150 @@ internal fun TimetableDatePickerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(max = maxDialogWidth)
-                .fillMaxWidth()
-                .heightIn(max = maxDialogHeight),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 10.dp,
-            shadowElevation = 12.dp
-        ) {
-            Column {
-                // Scroll the header too: large fonts must not consume the action row.
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp)
-                        ) {
-                            Text(
-                                selectedDate.year.toString() + "년",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                selectedTitle,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-
+        // Keep the caller's font scaling inside the dialog composition.
+        CompositionLocalProvider(LocalDensity provides density) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(max = maxDialogWidth)
+                    .fillMaxWidth()
+                    .heightIn(max = maxDialogHeight),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 10.dp,
+                shadowElevation = 12.dp
+            ) {
+                Column {
+                    // Scroll the header too: large fonts must not consume the action row.
                     Column(
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primaryContainer
                         ) {
-                            IconButton(
-                                onClick = {
-                                    visibleMonth = visibleMonth.minusMonths(1)
-                                }
+                            Column(
+                                modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp)
                             ) {
-                                Icon(
-                                    Icons.Filled.KeyboardArrowLeft,
-                                    contentDescription = "이전 달"
+                                Text(
+                                    selectedDate.year.toString() + "년",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
-                            }
-                            Text(
-                                monthTitle,
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            IconButton(
-                                onClick = {
-                                    visibleMonth = visibleMonth.plusMonths(1)
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Filled.KeyboardArrowRight,
-                                    contentDescription = "다음 달"
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    selectedTitle,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
 
-                        Spacer(Modifier.height(4.dp))
-
-                        // Narrow windows scroll the grid instead of shrinking touch targets.
-                        BoxWithConstraints(Modifier.fillMaxWidth()) {
-                            val gridWidth = maxOf(maxWidth, minimumGridWidth)
-                            Column(Modifier.horizontalScroll(rememberScrollState())) {
-                                Column(Modifier.width(gridWidth)) {
-                                    Row(Modifier.fillMaxWidth()) {
-                                        weekdays.forEachIndexed { index, label ->
-                                            val color = when (index) {
-                                                0 -> MaterialTheme.colorScheme.error
-                                                6 -> MaterialTheme.colorScheme.primary
-                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            }
-                                            Text(
-                                                label,
-                                                modifier = Modifier.weight(1f),
-                                                textAlign = TextAlign.Center,
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = color
-                                            )
-                                        }
+                        Column(
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        visibleMonth = visibleMonth.minusMonths(1)
                                     }
+                                ) {
+                                    Icon(
+                                        Icons.Filled.KeyboardArrowLeft,
+                                        contentDescription = "이전 달"
+                                    )
+                                }
+                                Text(
+                                    monthTitle,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                IconButton(
+                                    onClick = {
+                                        visibleMonth = visibleMonth.plusMonths(1)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Filled.KeyboardArrowRight,
+                                        contentDescription = "다음 달"
+                                    )
+                                }
+                            }
 
-                                    Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(4.dp))
 
-                                    cells.chunked(7).forEach { week ->
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            week.forEach { cell ->
-                                                CalendarDay(
-                                                    cell = cell,
-                                                    selected = cell.date == selectedDate,
-                                                    onClick = { date ->
-                                                        selectedDate = date
-                                                        visibleMonth = YearMonth.from(date)
-                                                    },
-                                                    modifier = Modifier.weight(1f)
+                            // Narrow windows scroll the grid instead of shrinking touch targets.
+                            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                                val gridWidth = maxOf(maxWidth, minimumGridWidth)
+                                Column(Modifier.horizontalScroll(rememberScrollState())) {
+                                    Column(Modifier.width(gridWidth)) {
+                                        Row(Modifier.fillMaxWidth()) {
+                                            weekdays.forEachIndexed { index, label ->
+                                                val color = when (index) {
+                                                    0 -> MaterialTheme.colorScheme.error
+                                                    6 -> MaterialTheme.colorScheme.primary
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                }
+                                                Text(
+                                                    label,
+                                                    modifier = Modifier.weight(1f),
+                                                    textAlign = TextAlign.Center,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = color
                                                 )
                                             }
                                         }
+
+                                        Spacer(Modifier.height(6.dp))
+
+                                        cells.chunked(7).forEach { week ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                week.forEach { cell ->
+                                                    CalendarDay(
+                                                        cell = cell,
+                                                        selected = cell.date == selectedDate,
+                                                        onClick = { date ->
+                                                            selectedDate = date
+                                                            visibleMonth = YearMonth.from(date)
+                                                        },
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("취소")
-                    }
-                    Button(
-                        onClick = { onConfirm(selectedDate) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("확인")
+                        TextButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("취소")
+                        }
+                        Button(
+                            onClick = { onConfirm(selectedDate) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("확인")
+                        }
                     }
                 }
             }

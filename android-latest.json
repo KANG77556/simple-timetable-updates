@@ -1,7 +1,7 @@
 {
-  "versionCode": 82,
-  "versionName": "0.3.76",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.76/MilseongJeil-v0.3.76.apk",
-  "sha256": "0e55bf35ca12c259f65e87efbfd94dbe91b2da784f1b11ff48a2354edbad58b2",
-  "notes": "v0.3.76: 캘린더 수업 조회를 선택 날짜 우선·백그라운드 방식으로 개선해 긴 중앙 로딩을 제거했습니다. 월 이동 시 이전 요청 취소와 부분 결과 재사용도 포함합니다."
+  "versionCode": 83,
+  "versionName": "0.3.77",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.77/MilseongJeil-v0.3.77.apk",
+  "sha256": "71b058aa14a13f704da3615bd580d2f99cb408fd4b2f39646761a7e7b114e04b",
+  "notes": "v0.3.77: 캘린더 진입·월 이동·오늘 복귀 시 스크롤을 맨 위로 복원해 월 제목·요일·월초 날짜가 잘리는 문제를 수정했습니다."
 }

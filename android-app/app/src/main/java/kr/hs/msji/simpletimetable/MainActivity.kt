@@ -1344,7 +1344,6 @@ private fun TodayScreen(
     }
 }
 
-@Composable
 internal fun nextUpcomingCalendarItem(
     items: List<CalendarItem>,
     fromDate: LocalDate
@@ -1357,6 +1356,7 @@ internal fun nextUpcomingCalendarItem(
         .firstOrNull()
         ?.second
 
+@Composable
 private fun TodayWorkSummary(
     label: String,
     value: String,

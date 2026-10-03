@@ -1066,7 +1066,7 @@ private fun TodayScreen(
                     Spacer(Modifier.width(12.dp))
                     if (compactHolidayNoClass) {
                         Text(
-                            selectedHolidayName + " · 수업 없음",
+                            if (isToday) "오늘 수업 없음" else "수업 없음",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -1109,6 +1109,15 @@ private fun TodayScreen(
             val todayTodos = activeTodos.count { it.dueDate == todayKey }
             val todayEvents = state.calendar.count { it.date == todayKey }
             val pinnedMemos = state.pinnedNoteCount ?: countPinnedActiveNotePages(state.notePages)
+            val nextCalendarItem = remember(state.calendar, actualToday) {
+                nextUpcomingCalendarItem(state.calendar, actualToday)
+            }
+            val nextTodo = remember(activeTodos, actualToday) {
+                activeTodos.mapNotNull { item ->
+                    val due = runCatching { LocalDate.parse(item.dueDate) }.getOrNull() ?: return@mapNotNull null
+                    if (!due.isBefore(actualToday)) due to item else null
+                }.sortedBy { it.first }.firstOrNull()
+            }
 
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -1169,7 +1178,74 @@ private fun TodayScreen(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            if (nextCalendarItem != null || nextTodo != null) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        if (nextCalendarItem != null) {
+                            val nextDate = runCatching { LocalDate.parse(nextCalendarItem.date) }.getOrNull()
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpen(AppTab.CALENDAR) }
+                            ) {
+                                Text(
+                                    "다음 일정",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    buildString {
+                                        if (nextDate != null) {
+                                            append(nextDate.format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)))
+                                            append(" · ")
+                                        }
+                                        append(nextCalendarItem.title.ifBlank { "일정" })
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        if (nextTodo != null) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpen(AppTab.TODO) }
+                            ) {
+                                Text(
+                                    "다음 TODO",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    nextTodo.second.text.ifBlank { "할 일" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
 
         LazyColumn(
@@ -1269,6 +1345,18 @@ private fun TodayScreen(
 }
 
 @Composable
+internal fun nextUpcomingCalendarItem(
+    items: List<CalendarItem>,
+    fromDate: LocalDate
+): CalendarItem? =
+    items.mapNotNull { item ->
+        val date = runCatching { LocalDate.parse(item.date) }.getOrNull() ?: return@mapNotNull null
+        if (date.isAfter(fromDate)) date to item else null
+    }
+        .sortedWith(compareBy<Pair<LocalDate, CalendarItem>>({ it.first }, { it.second.title }))
+        .firstOrNull()
+        ?.second
+
 private fun TodayWorkSummary(
     label: String,
     value: String,
@@ -1278,24 +1366,26 @@ private fun TodayWorkSummary(
     Surface(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
             Text(
                 label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

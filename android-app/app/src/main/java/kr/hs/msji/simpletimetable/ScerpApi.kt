@@ -12,7 +12,10 @@ class ScerpApiException(
     message: String
 ) : IllegalStateException(message)
 
-class ScerpApi(private val store: LocalStore? = null) {
+class ScerpApi(
+    private val store: LocalStore? = null,
+    private val applySessionUpdate: (() -> Unit) -> Unit = { it() }
+) {
     companion object {
         const val BASE_URL = "https://scerp.cloud"
     }
@@ -40,7 +43,7 @@ class ScerpApi(private val store: LocalStore? = null) {
             .orEmpty()
             .mapNotNull { it.substringBefore(';').trim().takeIf(String::isNotBlank) }
         if (setCookies.isNotEmpty()) {
-            store?.sessionCookie = setCookies.joinToString("; ")
+            applySessionUpdate { store?.sessionCookie = setCookies.joinToString("; ") }
         }
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()

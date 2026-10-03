@@ -2508,6 +2508,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
 
     var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
     var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
+    var pinned by remember(selected.id, selected.pinned) { mutableStateOf(selected.pinned) }
     var blocks by remember(selected.id, selected.blocks, state.loggedIn, selected.syncState) {
         mutableStateOf(
             selected.blocks.ifEmpty {
@@ -2541,6 +2542,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             selected.copy(
                 title = title.trim().ifBlank { "제목 없음" },
                 category = category.trim().ifBlank { "개인" },
+                pinned = pinned,
                 updatedAt = java.time.Instant.now().toString(),
                 blocks = blocks.mapIndexed { index, block -> block.copy(position = index) }
             )
@@ -2594,7 +2596,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         addMenuExpanded = false
     }
 
-    LaunchedEffect(dirty, title, category, blocks) {
+    LaunchedEffect(dirty, title, category, pinned, blocks) {
         if (dirty) {
             kotlinx.coroutines.delay(650)
             dirty = false
@@ -2630,6 +2632,14 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     Text("⋯", style = MaterialTheme.typography.titleLarge)
                 }
                 DropdownMenu(expanded = topMenuExpanded, onDismissRequest = { topMenuExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (pinned) "고정 해제" else "고정") },
+                        onClick = {
+                            topMenuExpanded = false
+                            pinned = !pinned
+                            dirty = true
+                        }
+                    )
                     DropdownMenuItem(text = { Text("지금 저장") }, onClick = {
                         topMenuExpanded = false
                         dirty = false
@@ -2674,6 +2684,16 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("속성", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(10.dp))
+                if (pinned) {
+                    AssistChip(
+                        onClick = {
+                            pinned = false
+                            dirty = true
+                        },
+                        label = { Text("고정됨") }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
                 Box {
                     AssistChip(onClick = { categoryMenuExpanded = true }, label = { Text(category.ifBlank { "개인" }) })
                     DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {

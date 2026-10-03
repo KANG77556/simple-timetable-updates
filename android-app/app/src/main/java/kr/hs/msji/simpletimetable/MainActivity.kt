@@ -2,7 +2,6 @@ package kr.hs.msji.simpletimetable
 
 import android.Manifest
 import android.app.Activity
-import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -806,17 +805,17 @@ private fun TodayScreen(
             )
         )
     }
-    val context = LocalContext.current
-    val openDatePicker = {
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                vm.selectDate(LocalDate.of(year, month + 1, dayOfMonth))
-            },
-            selectedDate.year,
-            selectedDate.monthValue - 1,
-            selectedDate.dayOfMonth
-        ).show()
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        TimetableDatePickerDialog(
+            initialDate = selectedDate,
+            onDismiss = { showDatePicker = false },
+            onConfirm = { date ->
+                showDatePicker = false
+                vm.selectDate(date)
+            }
+        )
     }
 
     Column(
@@ -865,7 +864,7 @@ private fun TodayScreen(
                     .weight(1f)
                     .height(48.dp)
                     .semantics { contentDescription = "날짜 선택: $dateLabel" }
-                    .clickable(onClick = openDatePicker),
+                    .clickable { showDatePicker = true },
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = androidx.compose.foundation.BorderStroke(

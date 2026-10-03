@@ -250,7 +250,7 @@ fun SimpleTimetableApp(
             ) {
                 NavigationBar(
                     modifier = Modifier.height(COMPACT_BOTTOM_NAV_HEIGHT_DP.dp),
-                    windowInsets = WindowInsets(0, 0, 0, 0)
+                    windowInsets = NavigationBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal)
                 ) {
                     AppTab.entries.forEach { item ->
                         NavigationBarItem(

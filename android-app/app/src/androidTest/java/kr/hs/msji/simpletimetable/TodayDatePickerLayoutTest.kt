@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -79,6 +80,11 @@ class TodayDatePickerLayoutTest {
         val day = compose.onNodeWithText("3").getUnclippedBoundsInRoot()
         assertTrue("day width must be at least 48dp: $day", day.width >= 48.dp)
         assertTrue("day height must be at least 48dp: $day", day.height >= 48.dp)
+        compose.onNodeWithText("3").performScrollTo().performTouchInput {
+            click(Offset(width - 4f, height - 4f))
+        }
+        compose.onNodeWithText("확인").performTouchInput { click() }
+        compose.runOnIdle { assertEquals(LocalDate.of(2026, 10, 3), confirmed) }
     }
 
     @Test fun holiday_label_tap_selects_date() {

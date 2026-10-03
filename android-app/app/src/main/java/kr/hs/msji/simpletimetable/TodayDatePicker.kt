@@ -183,7 +183,13 @@ internal fun TimetableDatePickerDialog(
                             // Narrow windows scroll the grid instead of shrinking touch targets.
                             BoxWithConstraints(Modifier.fillMaxWidth()) {
                                 val gridWidth = maxOf(maxWidth, minimumGridWidth)
-                                Column(Modifier.horizontalScroll(rememberScrollState())) {
+                                val horizontalScroll = rememberScrollState()
+                                val viewportModifier = if (gridWidth > maxWidth) {
+                                    Modifier.horizontalScroll(horizontalScroll)
+                                } else {
+                                    Modifier
+                                }
+                                Column(viewportModifier) {
                                     Column(Modifier.width(gridWidth)) {
                                         Row(Modifier.fillMaxWidth()) {
                                             weekdays.forEachIndexed { index, label ->

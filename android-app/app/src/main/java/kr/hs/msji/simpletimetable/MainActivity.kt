@@ -2096,6 +2096,7 @@ private fun AllTimetableScreen(state: AppUiState, vm: MainViewModel) {
 private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
+    var categoryFilter by remember { mutableStateOf("전체") }
     var pageMenuId by remember { mutableStateOf<String?>(null) }
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
     var multiSelectMode by remember { mutableStateOf(false) }
@@ -2109,13 +2110,21 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     }
 
     if (selectedId == null) {
+        val normalizedQuery = query.trim()
         val pages = state.notePages
             .filterNot { it.archived }
-            .filter {
-                query.isBlank() ||
-                    it.title.contains(query.trim(), ignoreCase = true) ||
-                    it.category.contains(query.trim(), ignoreCase = true) ||
-                    it.blocks.any { b -> b.content.contains(query.trim(), ignoreCase = true) }
+            .filter { page ->
+                normalizedQuery.isBlank() ||
+                    page.title.contains(normalizedQuery, ignoreCase = true) ||
+                    page.category.contains(normalizedQuery, ignoreCase = true) ||
+                    page.blocks.any { block -> block.content.contains(normalizedQuery, ignoreCase = true) }
+            }
+            .filter { page ->
+                when (categoryFilter) {
+                    "전체" -> true
+                    "고정" -> page.pinned
+                    else -> page.category == categoryFilter
+                }
             }
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
 
@@ -2208,7 +2217,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                     ) {
-                        Text("+")
+                        Text("+ 새 메모")
                     }
                 }
             }
@@ -2237,6 +2246,21 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
             )
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("전체", "고정", "업무", "수업", "학생", "회의").forEach { filter ->
+                    FilterChip(
+                        selected = categoryFilter == filter,
+                        onClick = { categoryFilter = filter },
+                        label = { Text(filter) }
+                    )
+                }
+            }
 
             Spacer(Modifier.height(4.dp))
 
@@ -2409,6 +2433,27 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             }
 
                             if (!multiSelectMode) {
+                                TextButton(
+                                    onClick = {
+                                        vm.saveNotePage(
+                                            page.copy(
+                                                pinned = !page.pinned,
+                                                updatedAt = java.time.Instant.now().toString()
+                                            )
+                                        )
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        if (page.pinned) "해제" else "고정",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (page.pinned) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
                                 Box {
                                     IconButton(onClick = { pageMenuId = page.id }) {
                                         Icon(
@@ -2420,6 +2465,18 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                                         expanded = pageMenuId == page.id,
                                         onDismissRequest = { pageMenuId = null }
                                     ) {
+                                        DropdownMenuItem(
+                                            text = { Text(if (page.pinned) "고정 해제" else "고정") },
+                                            onClick = {
+                                                pageMenuId = null
+                                                vm.saveNotePage(
+                                                    page.copy(
+                                                        pinned = !page.pinned,
+                                                        updatedAt = java.time.Instant.now().toString()
+                                                    )
+                                                )
+                                            }
+                                        )
                                         DropdownMenuItem(
                                             text = { Text("삭제") },
                                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },

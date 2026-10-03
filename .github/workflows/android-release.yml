@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
+              --notes "v$VERSION_NAME: 오늘 화면 날짜 선택 달력을 앱 테마에 맞게 개선하고, 일요일·공휴일은 빨간색, 토요일은 파란색으로 표시하며 공휴일 이름을 함께 보여줍니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 오늘 화면의 날짜를 누르면 달력에서 원하는 날짜를 직접 선택할 수 있습니다. 좁은 화면과 큰 글꼴에서도 날짜가 한 줄로 보이도록 표시를 최적화했습니다."
+            "notes": "v$VERSION_NAME: 오늘 화면 날짜 선택 달력을 앱 테마에 맞게 개선하고, 일요일·공휴일은 빨간색, 토요일은 파란색으로 표시하며 공휴일 이름을 함께 보여줍니다."
           }
           EOF
 

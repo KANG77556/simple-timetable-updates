@@ -24,9 +24,9 @@ class TodayDatePickerTest {
         assertNotNull(oct5)
         assertNotNull(oct9)
 
-        assertEquals("개천절", oct3.holidayName)
-        assertEquals("대체공휴일", oct5.holidayName)
-        assertEquals("한글날", oct9.holidayName)
+        assertEquals("개천절", oct3!!.holidayName)
+        assertEquals("대체공휴일", oct5!!.holidayName)
+        assertEquals("한글날", oct9!!.holidayName)
 
         assertNull(cells[0].date)
         assertNull(cells[1].date)

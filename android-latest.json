@@ -1,7 +1,7 @@
 {
-  "versionCode": 77,
-  "versionName": "0.3.71",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.71/MilseongJeil-v0.3.71.apk",
-  "sha256": "65de32f181ef9ef9d347bc4ee46668375b3fe39ff722720fca9778c03427c3d9",
-  "notes": "v0.3.71: 오늘 화면을 한 단계 더 압축했습니다. 공휴일명은 날짜 버튼 안에 배지로 표시하고, 공휴일 수업 없음 카드는 한 줄로 단순화했으며 오늘 업무 카드와 하단 내비게이션 높이도 줄였습니다."
+  "versionCode": 78,
+  "versionName": "0.3.72",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.72/MilseongJeil-v0.3.72.apk",
+  "sha256": "cff572ca9b73eafca7e8d2e64274c1d25f82f75f17911ae5466faa593403f8f5",
+  "notes": "v0.3.72: 오늘 화면의 공휴일 중복 표시를 줄이고 오늘 업무를 한 줄형으로 압축했습니다. 아래 빈 공간에는 다음 일정과 다음 TODO를 자동으로 보여줘 바로 이동할 수 있습니다."
 }

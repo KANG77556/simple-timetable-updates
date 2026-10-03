@@ -3223,6 +3223,8 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     var selectedDate by remember { mutableStateOf(today) }
     var title by remember { mutableStateOf("") }
     var showAdd by remember { mutableStateOf(false) }
+    val calendarScrollState = rememberScrollState()
+    var scrollResetToken by remember { mutableIntStateOf(0) }
 
     val firstDay = visibleMonth.atDay(1)
     val leadingBlankCount = firstDay.dayOfWeek.value % 7
@@ -3246,13 +3248,16 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     LaunchedEffect(visibleMonth, selectedDate, state.loggedIn) {
         if (state.loggedIn) vm.loadCalendarTimetableMonth(visibleMonth, selectedDate)
     }
+    LaunchedEffect(visibleMonth, scrollResetToken) {
+        calendarScrollState.scrollTo(0)
+    }
     val monthFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREA) }
     val fullDateFormatter = remember { DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREA) }
 
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(calendarScrollState)
             .padding(horizontal = 12.dp)
             .padding(bottom = 110.dp)
     ) {
@@ -3265,6 +3270,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                 onClick = {
                     visibleMonth = YearMonth.from(today)
                     selectedDate = today
+                    scrollResetToken += 1
                 }
             ) { Text("오늘") }
             TextButton(onClick = { showAdd = !showAdd }) {
@@ -3315,6 +3321,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                         onClick = {
                             visibleMonth = visibleMonth.minusMonths(1)
                             selectedDate = visibleMonth.atDay(1)
+                            scrollResetToken += 1
                         }
                     ) {
                         Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "이전 달")
@@ -3330,6 +3337,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                         onClick = {
                             visibleMonth = visibleMonth.plusMonths(1)
                             selectedDate = visibleMonth.atDay(1)
+                            scrollResetToken += 1
                         }
                     ) {
                         Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 달")

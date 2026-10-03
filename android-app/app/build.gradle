@@ -17,8 +17,8 @@ android {
         applicationId "kr.hs.msji.milseongjeil.stable"
         minSdk 26
         targetSdk 35
-        versionCode 81
-        versionName "0.3.75"
+        versionCode 82
+        versionName "0.3.76"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

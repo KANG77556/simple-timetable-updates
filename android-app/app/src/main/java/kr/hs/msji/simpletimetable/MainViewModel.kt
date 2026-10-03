@@ -34,6 +34,8 @@ data class AppUiState(
     val calendarTimetableMonth: String = "",
     val calendarTimetableUserId: String = "",
     val calendarTimetableError: String = "",
+    val calendarTimetableLoading: Boolean = false,
+    val calendarTimetableComplete: Boolean = false,
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
     val message: String = ""
@@ -44,7 +46,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val api = ScerpApi(store)
     private val trashRetentionMillis = 30L * 24L * 60L * 60L * 1000L
     @Volatile private var calendarTimetableRequestKey: String = ""
+    @Volatile private var calendarTimetableRequestGeneration: Long = 0L
     private var calendarTimetableJob: Job? = null
+    private val calendarTimetableLoadedDates = mutableSetOf<String>()
     private val noteMutationLocks = ConcurrentHashMap<String, Mutex>()
     private val initialNotePages = run {
         store.ensureNoteAccount(store.userId)
@@ -105,7 +109,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     calendarTimetable = emptyList(),
                     calendarTimetableMonth = "",
                     calendarTimetableUserId = "",
-                    calendarTimetableError = ""
+                    calendarTimetableError = "",
+                    calendarTimetableLoading = false,
+                    calendarTimetableComplete = false
                 ) }
             }) return@launchTimetableRequest
             executeTimetableRequest(request, profile.userId)
@@ -190,44 +196,91 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadCalendarTimetableMonth(month: YearMonth) {
+    fun loadCalendarTimetableMonth(month: YearMonth, priorityDate: LocalDate? = null) {
         if (!_state.value.loggedIn) return
         val userId = _state.value.profile.userId.ifBlank { store.userId }
         if (userId.isBlank()) return
+
         val monthKey = month.toString()
+        val current = _state.value
         if (
-            _state.value.calendarTimetableMonth == monthKey &&
-            _state.value.calendarTimetableUserId == userId &&
-            _state.value.calendarTimetableError.isBlank()
+            current.calendarTimetableMonth == monthKey &&
+            current.calendarTimetableUserId == userId &&
+            current.calendarTimetableComplete &&
+            current.calendarTimetableError.isBlank()
         ) return
 
-        val requestKey = userId + "|" + monthKey
+        val sameMonth =
+            current.calendarTimetableMonth == monthKey &&
+            current.calendarTimetableUserId == userId
+
+        if (!sameMonth) {
+            calendarTimetableLoadedDates.clear()
+        }
+
+        val orderedDates = calendarTimetableFetchDates(month, priorityDate)
+        val priorityKey = priorityDate
+            ?.takeIf { YearMonth.from(it) == month && it.dayOfWeek.value in 1..5 }
+            ?.toString()
+
+        val generation = ++calendarTimetableRequestGeneration
+        val requestKey = userId + "|" + monthKey + "|" + generation
         calendarTimetableRequestKey = requestKey
         calendarTimetableJob?.cancel()
 
+        _state.update { state ->
+            state.copy(
+                calendarTimetable = if (sameMonth) state.calendarTimetable else emptyList(),
+                calendarTimetableMonth = monthKey,
+                calendarTimetableUserId = userId,
+                calendarTimetableError = "",
+                calendarTimetableLoading = priorityKey != null && priorityKey !in calendarTimetableLoadedDates,
+                calendarTimetableComplete = false
+            )
+        }
+
         calendarTimetableJob = viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(loading = true, calendarTimetableError = "")
             try {
                 val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
-                val rows = mutableListOf<TimetableItem>()
-                for (day in 1..month.lengthOfMonth()) {
+
+                for (date in orderedDates) {
                     if (calendarTimetableRequestKey != requestKey) return@launch
-                    val date = month.atDay(day)
-                    if (date.dayOfWeek.value !in 1..5) continue
-                    rows += api.fetchMyTimetable(date.toString(), userId, displayName)
+                    val dateKey = date.toString()
+
+                    if (dateKey in calendarTimetableLoadedDates) {
+                        if (dateKey == priorityKey && calendarTimetableRequestKey == requestKey) {
+                            _state.update { it.copy(calendarTimetableLoading = false) }
+                        }
+                        continue
+                    }
+
+                    val fetched = api.fetchMyTimetable(dateKey, userId, displayName)
+                    if (calendarTimetableRequestKey != requestKey) return@launch
+
+                    calendarTimetableLoadedDates += dateKey
+                    val dayRows = fetched.filter {
+                        it.subject.isNotBlank() || it.room.isNotBlank() || it.startTime.isNotBlank()
+                    }
+
+                    _state.update { state ->
+                        val merged = (state.calendarTimetable.filterNot { it.date == dateKey } + dayRows)
+                            .distinctBy { "${it.date}-${it.period}-${it.subject}-${it.room}" }
+                            .sortedWith(compareBy<TimetableItem>({ it.date }, { it.period }))
+                        state.copy(
+                            calendarTimetable = merged,
+                            calendarTimetableLoading = if (dateKey == priorityKey) false else state.calendarTimetableLoading
+                        )
+                    }
                 }
-                val normalized = rows
-                    .filter { it.subject.isNotBlank() || it.room.isNotBlank() || it.startTime.isNotBlank() }
-                    .distinctBy { "${it.date}-${it.period}-${it.subject}-${it.room}" }
-                    .sortedWith(compareBy<TimetableItem>({ it.date }, { it.period }))
 
                 if (calendarTimetableRequestKey == requestKey) {
-                    _state.value = _state.value.copy(
-                        calendarTimetable = normalized,
-                        calendarTimetableMonth = monthKey,
-                        calendarTimetableUserId = userId,
-                        calendarTimetableError = ""
-                    )
+                    _state.update {
+                        it.copy(
+                            calendarTimetableError = "",
+                            calendarTimetableLoading = false,
+                            calendarTimetableComplete = true
+                        )
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -236,6 +289,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (apiError?.code == "authentication_required") {
                     store.clearSession()
                     calendarTimetableRequestKey = ""
+                    calendarTimetableLoadedDates.clear()
                     _state.value = _state.value.copy(
                         loggedIn = false,
                         classrooms = emptyList(),
@@ -243,19 +297,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         calendarTimetableMonth = "",
                         calendarTimetableUserId = "",
                         calendarTimetableError = "",
+                        calendarTimetableLoading = false,
+                        calendarTimetableComplete = false,
                         message = "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
                     )
                 } else if (calendarTimetableRequestKey == requestKey) {
-                    _state.value = _state.value.copy(
-                        calendarTimetable = emptyList(),
-                        calendarTimetableMonth = monthKey,
-                        calendarTimetableUserId = userId,
-                        calendarTimetableError = apiError?.message ?: e.message ?: "수업을 불러오지 못했습니다."
-                    )
+                    _state.update {
+                        it.copy(
+                            calendarTimetableError = apiError?.message ?: e.message ?: "수업을 불러오지 못했습니다.",
+                            calendarTimetableLoading = false,
+                            calendarTimetableComplete = false
+                        )
+                    }
                 }
             } finally {
                 if (calendarTimetableRequestKey == requestKey) {
-                    _state.value = _state.value.copy(loading = false)
+                    _state.update { it.copy(calendarTimetableLoading = false) }
                 }
             }
         }

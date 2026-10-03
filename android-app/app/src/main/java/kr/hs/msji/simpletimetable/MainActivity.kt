@@ -797,7 +797,7 @@ private fun TodayScreen(
         if (isToday) TimetableStatus.calculate(state.myTimetable) else ClassStatus()
     }
     val configuration = LocalConfiguration.current
-    val compactDateLabel = configuration.screenWidthDp < 380 || configuration.fontScale >= 1.15f
+    val compactDateLabel = configuration.screenWidthDp < 430 || configuration.fontScale >= 1.15f
     val dateLabel = remember(selectedDate, compactDateLabel) {
         selectedDate.format(
             DateTimeFormatter.ofPattern(
@@ -806,6 +806,7 @@ private fun TodayScreen(
             )
         )
     }
+    val selectedHolidayName = remember(selectedDate) { KoreanHolidays.name(selectedDate) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
@@ -826,29 +827,12 @@ private fun TodayScreen(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            FilledTonalButton(
-                onClick = vm::goToToday,
-                enabled = !isToday,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("오늘")
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.size(44.dp),
+                shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 IconButton(onClick = { vm.moveDate(-1) }) {
@@ -863,10 +847,10 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .height(44.dp)
                     .semantics { contentDescription = "날짜 선택: $dateLabel" }
                     .clickable { showDatePicker = true },
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
@@ -874,20 +858,22 @@ private fun TodayScreen(
                 )
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = if (compactDateLabel) 8.dp else 14.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = if (compactDateLabel) 6.dp else 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         Icons.Filled.DateRange,
                         contentDescription = null,
-                        modifier = Modifier.size(if (compactDateLabel) 16.dp else 18.dp),
+                        modifier = Modifier.size(if (compactDateLabel) 15.dp else 17.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.width(if (compactDateLabel) 6.dp else 8.dp))
+                    Spacer(Modifier.width(if (compactDateLabel) 5.dp else 7.dp))
                     Text(
                         dateLabel,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (compactDateLabel) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         softWrap = false,
@@ -897,8 +883,8 @@ private fun TodayScreen(
             }
 
             Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.size(44.dp),
+                shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 IconButton(onClick = { vm.moveDate(1) }) {
@@ -909,9 +895,31 @@ private fun TodayScreen(
                     )
                 }
             }
+
+            FilledTonalButton(
+                onClick = vm::goToToday,
+                enabled = !isToday,
+                modifier = Modifier.height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp)
+            ) {
+                Text("오늘", maxLines = 1)
+            }
         }
 
-        Spacer(Modifier.height(14.dp))
+        if (selectedHolidayName != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                selectedHolidayName,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Spacer(Modifier.height(if (selectedHolidayName != null) 8.dp else 10.dp))
 
         val focus = status.current ?: status.next
         if (isToday && focus != null) {
@@ -1019,21 +1027,21 @@ private fun TodayScreen(
                 }
             ) {
                 Row(
-                    Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                    Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(15.dp),
+                        shape = RoundedCornerShape(13.dp),
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DateRange,
                             contentDescription = null,
-                            modifier = Modifier.padding(13.dp).size(26.dp),
+                            modifier = Modifier.padding(11.dp).size(22.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
                             when {
@@ -1041,7 +1049,7 @@ private fun TodayScreen(
                                 rows.isEmpty() -> "오늘 수업 없음"
                                 else -> "오늘 수업 종료"
                             },
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
@@ -1051,6 +1059,7 @@ private fun TodayScreen(
                                 rows.isEmpty() -> "오늘 등록된 수업이 없습니다."
                                 else -> "오늘 일정이 모두 끝났습니다."
                             },
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

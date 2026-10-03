@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -244,35 +245,34 @@ private fun CalendarDay(
     ) {
         if (date == null) {
             Spacer(Modifier.height(34.dp))
-            return@Column
-        }
-
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(
-                    color = if (selected) selectionColor else Color.Transparent,
-                    shape = RoundedCornerShape(17.dp)
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .background(
+                        color = if (selected) selectionColor else Color.Transparent,
+                        shape = RoundedCornerShape(17.dp)
+                    )
+                    .clickable { onClick(date) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    date.dayOfMonth.toString(),
+                    fontWeight = if (selected || holiday) FontWeight.Bold else FontWeight.Medium,
+                    color = foreground
                 )
-                .clickable { onClick(date) },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                date.dayOfMonth.toString(),
-                fontWeight = if (selected || holiday) FontWeight.Bold else FontWeight.Medium,
-                color = foreground
-            )
-        }
+            }
 
-        if (cell.holidayName != null) {
-            Text(
-                cell.holidayName,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                color = MaterialTheme.colorScheme.error,
-                maxLines = 1
-            )
+            if (cell.holidayName != null) {
+                Text(
+                    cell.holidayName,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

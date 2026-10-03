@@ -206,7 +206,11 @@ fun SimpleTimetableApp(
                             tab == AppTab.CALENDAR -> "캘린더"
                             else -> "전자칠판 방송"
                         },
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = if (!showSettings && !globalSearch && tab == AppTab.TODAY) {
+                            MaterialTheme.typography.headlineSmall
+                        } else {
+                            MaterialTheme.typography.headlineMedium
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -234,7 +238,7 @@ fun SimpleTimetableApp(
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(modifier = Modifier.height(72.dp)) {
                 AppTab.entries.forEach { item ->
                     NavigationBarItem(
                         selected = tab == item,
@@ -695,7 +699,7 @@ private fun LoginScreen(state: AppUiState, vm: MainViewModel) {
                 Column(Modifier.padding(18.dp)) {
                     Text(
                         "로그인",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(14.dp))
@@ -879,6 +883,22 @@ private fun TodayScreen(
                         softWrap = false,
                         overflow = TextOverflow.Clip
                     )
+                    if (selectedHolidayName != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Text(
+                                selectedHolidayName,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
 
@@ -907,19 +927,7 @@ private fun TodayScreen(
             }
         }
 
-        if (selectedHolidayName != null) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                selectedHolidayName,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        Spacer(Modifier.height(if (selectedHolidayName != null) 8.dp else 10.dp))
+        Spacer(Modifier.height(8.dp))
 
         val focus = status.current ?: status.next
         if (isToday && focus != null) {
@@ -1015,11 +1023,12 @@ private fun TodayScreen(
                 }
             }
         } else {
+            val compactHolidayNoClass = selectedHolidayName != null && rows.isEmpty()
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(if (compactHolidayNoClass) 18.dp else 22.dp)),
+                shape = RoundedCornerShape(if (compactHolidayNoClass) 18.dp else 22.dp),
                 color = if (isToday) {
                     MaterialTheme.colorScheme.surface
                 } else {
@@ -1027,41 +1036,63 @@ private fun TodayScreen(
                 }
             ) {
                 Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    Modifier.padding(
+                        horizontal = 16.dp,
+                        vertical = if (compactHolidayNoClass) 9.dp else 12.dp
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         shape = RoundedCornerShape(13.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        color = if (compactHolidayNoClass) {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.72f)
+                        } else {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DateRange,
                             contentDescription = null,
-                            modifier = Modifier.padding(11.dp).size(22.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            modifier = Modifier
+                                .padding(if (compactHolidayNoClass) 9.dp else 11.dp)
+                                .size(if (compactHolidayNoClass) 20.dp else 22.dp),
+                            tint = if (compactHolidayNoClass) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
                         )
                     }
                     Spacer(Modifier.width(12.dp))
-                    Column {
+                    if (compactHolidayNoClass) {
                         Text(
-                            when {
-                                !isToday -> "선택 날짜 시간표"
-                                rows.isEmpty() -> "오늘 수업 없음"
-                                else -> "오늘 수업 종료"
-                            },
+                            selectedHolidayName + " · 수업 없음",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            when {
-                                !isToday && rows.isEmpty() -> "등록된 수업이 없습니다."
-                                !isToday -> "총 ${rows.size}개 수업이 있습니다."
-                                rows.isEmpty() -> "오늘 등록된 수업이 없습니다."
-                                else -> "오늘 일정이 모두 끝났습니다."
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    } else {
+                        Column {
+                            Text(
+                                when {
+                                    !isToday -> "선택 날짜 시간표"
+                                    rows.isEmpty() -> "오늘 수업 없음"
+                                    else -> "오늘 수업 종료"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                when {
+                                    !isToday && rows.isEmpty() -> "등록된 수업이 없습니다."
+                                    !isToday -> "총 ${rows.size}개 수업이 있습니다."
+                                    rows.isEmpty() -> "오늘 등록된 수업이 없습니다."
+                                    else -> "오늘 일정이 모두 끝났습니다."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -1083,7 +1114,7 @@ private fun TodayScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp)
             ) {
-                Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -1110,7 +1141,7 @@ private fun TodayScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(5.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1251,7 +1282,7 @@ private fun TodayWorkSummary(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(

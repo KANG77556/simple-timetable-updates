@@ -3243,8 +3243,8 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     val selectedLessons = timetableByDate[selectedDate.toString()].orEmpty().sortedBy { it.period }
     val holidayName = KoreanHolidays.name(selectedDate)
 
-    LaunchedEffect(visibleMonth, state.loggedIn) {
-        if (state.loggedIn) vm.loadCalendarTimetableMonth(visibleMonth)
+    LaunchedEffect(visibleMonth, selectedDate, state.loggedIn) {
+        if (state.loggedIn) vm.loadCalendarTimetableMonth(visibleMonth, selectedDate)
     }
     val monthFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREA) }
     val fullDateFormatter = remember { DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREA) }
@@ -3334,6 +3334,18 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                     ) {
                         Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "다음 달")
                     }
+                }
+
+                if (
+                    state.calendarTimetableLoading &&
+                    state.calendarTimetableMonth == visibleMonth.toString()
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
                 }
 
                 Row(Modifier.fillMaxWidth()) {

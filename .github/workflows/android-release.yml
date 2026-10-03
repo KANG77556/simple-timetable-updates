@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 메모 목록의 더보기 메뉴를 제거하고 삭제 버튼을 직접 표시했습니다. 로그인·날짜 이동 요청 경합 보호와 달력 짧은 화면·터치 영역 수정도 포함합니다."
+              --notes "v$VERSION_NAME: 캘린더 수업 조회를 선택 날짜 우선·백그라운드 방식으로 개선해 긴 중앙 로딩을 제거했습니다. 월 이동 시 이전 요청 취소와 부분 결과 재사용도 포함합니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 메모 목록의 더보기 메뉴를 제거하고 삭제 버튼을 직접 표시했습니다. 로그인·날짜 이동 요청 경합 보호와 달력 짧은 화면·터치 영역 수정도 포함합니다."
+            "notes": "v$VERSION_NAME: 캘린더 수업 조회를 선택 날짜 우선·백그라운드 방식으로 개선해 긴 중앙 로딩을 제거했습니다. 월 이동 시 이전 요청 취소와 부분 결과 재사용도 포함합니다."
           }
           EOF
 

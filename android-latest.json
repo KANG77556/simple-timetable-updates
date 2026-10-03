@@ -1,7 +1,7 @@
 {
-  "versionCode": 79,
-  "versionName": "0.3.73",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.73/MilseongJeil-v0.3.73.apk",
-  "sha256": "1548a1d004a105d7b20c58988e9efec420b34adefa7c325ae3ffe2331c694b97",
-  "notes": "v0.3.73: 메모 편집 화면에 고정·고정 해제 기능을 추가했습니다. 고정한 메모는 목록 상단에 유지되고 오늘 화면의 고정 메모 개수에도 즉시 반영됩니다."
+  "versionCode": 80,
+  "versionName": "0.3.74",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.74/MilseongJeil-v0.3.74.apk",
+  "sha256": "732d7cbd93dd3b38cadf84dcf9f3a447a503595c6a239411f84e47f1459c3a96",
+  "notes": "v0.3.74: 메모 편집 화면에 고정·고정 해제 기능을 추가했습니다. 고정한 메모는 목록 상단에 유지되고 오늘 화면의 고정 메모 개수에도 즉시 반영됩니다."
 }

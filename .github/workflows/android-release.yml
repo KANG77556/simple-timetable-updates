@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 오늘 화면의 공휴일 중복 표시를 줄이고 오늘 업무를 한 줄형으로 압축했습니다. 아래 빈 공간에는 다음 일정과 다음 TODO를 자동으로 보여줘 바로 이동할 수 있습니다."
+              --notes "v$VERSION_NAME: 메모 편집 화면에 고정·고정 해제 기능을 추가했습니다. 고정한 메모는 목록 상단에 유지되고 오늘 화면의 고정 메모 개수에도 즉시 반영됩니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 오늘 화면의 공휴일 중복 표시를 줄이고 오늘 업무를 한 줄형으로 압축했습니다. 아래 빈 공간에는 다음 일정과 다음 TODO를 자동으로 보여줘 바로 이동할 수 있습니다."
+            "notes": "v$VERSION_NAME: 메모 편집 화면에 고정·고정 해제 기능을 추가했습니다. 고정한 메모는 목록 상단에 유지되고 오늘 화면의 고정 메모 개수에도 즉시 반영됩니다."
           }
           EOF
 

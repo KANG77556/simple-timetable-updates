@@ -878,15 +878,13 @@ private fun TodayScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    if (!compactDateLabel) {
-                        Icon(
-                            Icons.Filled.DateRange,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
+                    Icon(
+                        Icons.Filled.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (compactDateLabel) 16.dp else 18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(if (compactDateLabel) 6.dp else 8.dp))
                     Text(
                         dateLabel,
                         style = MaterialTheme.typography.titleMedium,

@@ -14,9 +14,10 @@ class ScerpApiException(
 
 
 internal fun collapseSharedCommonEvents(rows: List<TimetableItem>): List<TimetableItem> {
-    if (rows.isEmpty()) return emptyList()
-    if (rows.any { it.teacher.isNotBlank() || it.subject.isBlank() }) return emptyList()
-    return rows
+    val meaningful = rows.filter { it.subject.isNotBlank() }
+    if (meaningful.isEmpty()) return emptyList()
+    if (meaningful.any { it.teacher.isNotBlank() }) return emptyList()
+    return meaningful
         .distinctBy { listOf(it.date, it.period.toString(), it.subject).joinToString("|") }
         .map { it.copy(grade = 0, classCode = "전체") }
         .sortedWith(compareBy<TimetableItem> { it.period }.thenBy { it.subject })

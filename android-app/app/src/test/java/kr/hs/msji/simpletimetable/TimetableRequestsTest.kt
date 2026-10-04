@@ -13,6 +13,20 @@ class TimetableRequestsTest {
     private fun rows(date: String, subject: String = "회계") =
         listOf(TimetableItem(date, 1, "경영1", 1, subject, "교사", "101"))
 
+    @Test fun loginKeepsLoadingEvenWhenPersistedRowsAreVisible() {
+        val persisted = rows(today)
+        assertTrue(shouldShowTimetableLoading(forceLoading = true, cachedRows = null, visibleRows = persisted))
+    }
+
+    @Test fun cachedNavigationDoesNotShowBlockingLoading() {
+        val cached = rows(yesterday)
+        assertFalse(shouldShowTimetableLoading(forceLoading = false, cachedRows = cached, visibleRows = cached))
+    }
+
+    @Test fun uncachedNavigationStillShowsLoadingWhenNothingIsVisible() {
+        assertTrue(shouldShowTimetableLoading(forceLoading = false, cachedRows = null, visibleRows = emptyList()))
+    }
+
     @Test fun rolloverUpdatesTodayCacheWithoutFalseAlert() {
         val requests = TimetableRequests()
         var cache = rows(yesterday)

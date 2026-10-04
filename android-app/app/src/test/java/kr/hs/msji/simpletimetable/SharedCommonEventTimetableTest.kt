@@ -43,6 +43,18 @@ class SharedCommonEventTimetableTest {
         assertTrue(collapseSharedCommonEvents(rows).isEmpty())
     }
 
+    @Test fun ignoresBlankSpecialSlotsWhenCommonEventsExist() {
+        val rows = listOf(
+            TimetableItem(date, 1, "경영1", 1, "1차 정기시험"),
+            TimetableItem(date, 3, "경영1", 1, "2차 정기시험"),
+            TimetableItem(date, 3, "IT1", 7, "")
+        )
+
+        val result = collapseSharedCommonEvents(rows)
+
+        assertEquals(listOf("1차 정기시험", "2차 정기시험"), result.map { it.subject })
+    }
+
     @Test fun rejectsBlankSubjects() {
         val rows = listOf(TimetableItem(date, 1, "경영1", 1, ""))
 

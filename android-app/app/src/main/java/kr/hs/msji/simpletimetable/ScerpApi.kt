@@ -2,9 +2,13 @@ package kr.hs.msji.simpletimetable
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
+import java.net.UnknownHostException
 
 class ScerpApiException(
     val status: Int,
@@ -48,46 +52,81 @@ class ScerpApi(
     }
 
     private fun request(path: String, method: String = "GET", body: JSONObject? = null): JSONObject {
-        val connection = URL(BASE_URL + path).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = 15000
-        connection.readTimeout = 30000
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("Origin", BASE_URL)
-        connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/${BuildConfig.VERSION_NAME}")
-        store?.sessionCookie?.takeIf { it.isNotBlank() }?.let {
-            connection.setRequestProperty("Cookie", it)
+        val retryable = method.equals("GET", ignoreCase = true)
+        var lastNetworkError: IOException? = null
+
+        repeat(if (retryable) 2 else 1) { attempt ->
+            try {
+                return requestOnce(path, method, body)
+            } catch (e: IOException) {
+                if (!isTransientNetworkError(e) || !retryable) throw networkException(e)
+                lastNetworkError = e
+                if (attempt == 0) Thread.sleep(350)
+            }
         }
-        if (body != null) {
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-        }
-        val code = connection.responseCode
-        val setCookies = connection.headerFields.entries
-            .firstOrNull { it.key?.equals("Set-Cookie", ignoreCase = true) == true }
-            ?.value
-            .orEmpty()
-            .mapNotNull { it.substringBefore(';').trim().takeIf(String::isNotBlank) }
-        if (setCookies.isNotEmpty()) {
-            applySessionUpdate { store?.sessionCookie = setCookies.joinToString("; ") }
-        }
-        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-        val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-        if (text.isBlank()) {
-            throw ScerpApiException(code, "empty_response", "SCERP 응답이 비어 있습니다. HTTP $code")
-        }
-        val json = JSONObject(text)
-        if (!json.optBoolean("ok", code in 200..299)) {
-            val error = json.optJSONObject("error")
-            val errorCode = error?.optString("code").orEmpty().ifBlank { "request_failed" }
-            val message = error?.optString("message")
-                ?: json.optString("message")
-                ?: "SCERP 요청 실패"
-            throw ScerpApiException(code, errorCode, message)
-        }
-        return json
+
+        throw networkException(lastNetworkError ?: IOException("network request failed"))
     }
+
+    private fun requestOnce(path: String, method: String, body: JSONObject?): JSONObject {
+        val connection = URL(BASE_URL + path).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 15000
+            connection.readTimeout = 30000
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Origin", BASE_URL)
+            connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/${BuildConfig.VERSION_NAME}")
+            store?.sessionCookie?.takeIf { it.isNotBlank() }?.let {
+                connection.setRequestProperty("Cookie", it)
+            }
+            if (body != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            }
+            val code = connection.responseCode
+            val setCookies = connection.headerFields.entries
+                .firstOrNull { it.key?.equals("Set-Cookie", ignoreCase = true) == true }
+                ?.value
+                .orEmpty()
+                .mapNotNull { it.substringBefore(';').trim().takeIf(String::isNotBlank) }
+            if (setCookies.isNotEmpty()) {
+                applySessionUpdate { store?.sessionCookie = setCookies.joinToString("; ") }
+            }
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (text.isBlank()) {
+                throw ScerpApiException(code, "empty_response", "SCERP 응답이 비어 있습니다. HTTP $code")
+            }
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", code in 200..299)) {
+                val error = json.optJSONObject("error")
+                val errorCode = error?.optString("code").orEmpty().ifBlank { "request_failed" }
+                val message = error?.optString("message")
+                    ?: json.optString("message")
+                    ?: "SCERP 요청 실패"
+                throw ScerpApiException(code, errorCode, message)
+            }
+            return json
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun isTransientNetworkError(error: IOException): Boolean =
+        error is SocketException ||
+            error is SocketTimeoutException ||
+            error is UnknownHostException ||
+            error.message?.contains("connection abort", ignoreCase = true) == true ||
+            error.message?.contains("connection reset", ignoreCase = true) == true
+
+    private fun networkException(error: IOException): ScerpApiException =
+        ScerpApiException(
+            status = 0,
+            code = "network_error",
+            message = "SCERP 서버와 연결이 일시적으로 끊겼습니다. 잠시 후 다시 시도해 주세요."
+        )
 
     fun login(loginId: String, password: String): UserProfile {
         request("/api/auth/login", "POST", JSONObject().put("loginId", loginId).put("password", password))

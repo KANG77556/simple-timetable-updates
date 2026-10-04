@@ -44,6 +44,7 @@ data class AppUiState(
     val calendarTimetableComplete: Boolean = false,
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
+    val timetableError: String = "",
     val message: String = ""
 )
 
@@ -104,7 +105,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val request = beginTimetableRequest(LocalDate.now().toString(), forceLoading = true)
         return launchTimetableRequest(request) {
             val previousUserId = store.userId
-            val profile = timetableApi(request).login(loginId, password)
+            val profile = try {
+                timetableApi(request).login(loginId, password)
+            } catch (e: Exception) {
+                timetableRequests.applyIfCurrent(request) {
+                    handleTaskError(e)
+                }
+                return@launchTimetableRequest
+            }
             // Publish the account only while this login still owns the request generation.
             if (!timetableRequests.applyIfCurrent(request) {
                 store.switchNoteAccount(previousUserId, profile.userId)
@@ -170,17 +178,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 today = date,
                 myTimetable = visibleRows,
                 loading = shouldShowTimetableLoading(forceLoading, cachedRows, visibleRows),
+                timetableError = "",
                 message = ""
             )
         }
     }
 
-    private fun launchTimetableRequest(request: TimetableRequests.Request, block: () -> Unit): Job =
+    private fun launchTimetableRequest(
+        request: TimetableRequests.Request,
+        block: () -> Unit
+    ): Job =
         viewModelScope.launch(Dispatchers.IO) {
             timetableRequests.execute(
                 request,
                 block = block,
-                onError = ::handleTaskError,
+                onError = { error ->
+                    val apiError = error as? ScerpApiException
+                    if (apiError?.code == "authentication_required") {
+                        timetableRequests.applyIfCurrent(request) {
+                            handleTaskError(error)
+                        }
+                    } else {
+                        timetableRequests.applyIfCurrent(request) {
+                            _state.update {
+                                it.copy(
+                                    timetableError = apiError?.message ?: error.message ?: "시간표를 불러오지 못했습니다."
+                                )
+                            }
+                        }
+                    }
+                },
                 onFinished = { _state.update { it.copy(loading = false) } }
             )
         }
@@ -209,7 +236,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 TimetableWidget.updateAll(getApplication())
                 if (changed) NotificationHelper.showTimetableChanged(getApplication())
             }
-            _state.update { it.copy(today = request.date, myTimetable = rows) }
+            _state.update { it.copy(today = request.date, myTimetable = rows, timetableError = "") }
         }
         if (applied) prefetchAdjacentTimetable(request.date, userId, displayName)
     }

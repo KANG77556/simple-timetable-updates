@@ -78,11 +78,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val state: StateFlow<AppUiState> = _state
 
     private val timetableRequests = TimetableRequests()
+    private val timetableCache = ConcurrentHashMap<String, List<TimetableItem>>()
 
     init {
         if (_state.value.loggedIn) {
             val userId = _state.value.profile.userId.ifBlank { store.userId }
-            if (userId.isNotBlank()) startTimetableRefresh(LocalDate.now().toString(), userId)
+            val today = LocalDate.now().toString()
+            if (userId.isNotBlank()) {
+                val persisted = _state.value.myTimetable
+                if (persisted.isNotEmpty() && persisted.all { it.date == today }) {
+                    timetableCache[timetableCacheKey(userId, today)] = persisted
+                }
+                startTimetableRefresh(today, userId)
+            }
         }
     }
 
@@ -141,13 +149,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (userId.isNotBlank()) startTimetableRefresh(date.toString(), userId)
     }
 
+    private fun timetableCacheKey(userId: String, date: String) = "$userId|$date"
+
     // Reserve before launching IO so rapid taps and login publication cannot reorder ownership.
-    private fun beginTimetableRequest(date: String) = timetableRequests.begin(date) {
+    // Cached dates switch immediately; network refresh continues without blanking the timetable.
+    private fun beginTimetableRequest(
+        date: String,
+        cachedRows: List<TimetableItem>? = null
+    ) = timetableRequests.begin(date) {
         _state.update { current ->
+            val visibleRows = cachedRows ?: if (current.today == date) current.myTimetable else emptyList()
             current.copy(
                 today = date,
-                myTimetable = if (current.today == date) current.myTimetable else emptyList(),
-                loading = true,
+                myTimetable = visibleRows,
+                loading = cachedRows == null && visibleRows.isEmpty(),
                 message = ""
             )
         }
@@ -164,7 +179,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
     private fun startTimetableRefresh(date: String, userId: String): Job {
-        val request = beginTimetableRequest(date)
+        val cachedRows = timetableCache[timetableCacheKey(userId, date)]
+        val request = beginTimetableRequest(date, cachedRows)
         return launchTimetableRequest(request) { executeTimetableRequest(request, userId) }
     }
 
@@ -178,7 +194,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val before = decodeTimetable(store.latestTimetableJson)
         val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
         val rows = timetableApi(request).fetchMyTimetable(request.date, userId, displayName)
-        timetableRequests.applyIfCurrent(request) {
+        timetableCache[timetableCacheKey(userId, request.date)] = rows
+        val applied = timetableRequests.applyIfCurrent(request) {
             if (request.date == LocalDate.now().toString()) {
                 val changed = timetableChangedForDate(request.date, before, rows)
                 store.latestTimetableJson = encodeTimetable(rows)
@@ -186,6 +203,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (changed) NotificationHelper.showTimetableChanged(getApplication())
             }
             _state.update { it.copy(today = request.date, myTimetable = rows) }
+        }
+        if (applied) prefetchAdjacentTimetable(request.date, userId, displayName)
+    }
+
+    private fun prefetchAdjacentTimetable(anchorDate: String, userId: String, displayName: String) {
+        val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrNull() ?: return
+        listOf(anchor.minusDays(1), anchor.plusDays(1)).forEach { date ->
+            val dateKey = date.toString()
+            val cacheKey = timetableCacheKey(userId, dateKey)
+            if (timetableCache.containsKey(cacheKey)) return@forEach
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching {
+                    // Prefetch must never let an old/background response replace the active session cookie.
+                    ScerpApi(store) { _ -> }.fetchMyTimetable(dateKey, userId, displayName)
+                }.onSuccess { rows ->
+                    timetableCache.putIfAbsent(cacheKey, rows)
+                }
+            }
         }
     }
 

@@ -18,6 +18,12 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.concurrent.ConcurrentHashMap
 
+internal fun shouldShowTimetableLoading(
+    forceLoading: Boolean,
+    cachedRows: List<TimetableItem>?,
+    visibleRows: List<TimetableItem>
+): Boolean = forceLoading || (cachedRows == null && visibleRows.isEmpty())
+
 data class AppUiState(
     val loading: Boolean = false,
     val loggedIn: Boolean = false,
@@ -95,7 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun login(loginId: String, password: String): Job {
-        val request = beginTimetableRequest(LocalDate.now().toString())
+        val request = beginTimetableRequest(LocalDate.now().toString(), forceLoading = true)
         return launchTimetableRequest(request) {
             val previousUserId = store.userId
             val profile = timetableApi(request).login(loginId, password)
@@ -155,14 +161,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Cached dates switch immediately; network refresh continues without blanking the timetable.
     private fun beginTimetableRequest(
         date: String,
-        cachedRows: List<TimetableItem>? = null
+        cachedRows: List<TimetableItem>? = null,
+        forceLoading: Boolean = false
     ) = timetableRequests.begin(date) {
         _state.update { current ->
             val visibleRows = cachedRows ?: if (current.today == date) current.myTimetable else emptyList()
             current.copy(
                 today = date,
                 myTimetable = visibleRows,
-                loading = cachedRows == null && visibleRows.isEmpty(),
+                loading = shouldShowTimetableLoading(forceLoading, cachedRows, visibleRows),
                 message = ""
             )
         }

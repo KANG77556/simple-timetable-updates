@@ -38,6 +38,7 @@ data class AppUiState(
     val calendarTimetableComplete: Boolean = false,
     val classrooms: List<Classroom> = emptyList(),
     val lastLoginId: String = "",
+    val timetableError: String = "",
     val message: String = ""
 )
 
@@ -148,6 +149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 today = date,
                 myTimetable = if (current.today == date) current.myTimetable else emptyList(),
                 loading = true,
+                timetableError = "",
                 message = ""
             )
         }
@@ -158,7 +160,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             timetableRequests.execute(
                 request,
                 block = block,
-                onError = ::handleTaskError,
+                onError = { error ->
+                    val apiError = error as? ScerpApiException
+                    if (apiError?.code == "authentication_required") {
+                        handleTaskError(error)
+                    } else {
+                        timetableRequests.applyIfCurrent(request) {
+                            _state.update {
+                                it.copy(
+                                    timetableError = apiError?.message ?: error.message ?: "시간표를 불러오지 못했습니다."
+                                )
+                            }
+                        }
+                    }
+                },
                 onFinished = { _state.update { it.copy(loading = false) } }
             )
         }
@@ -185,7 +200,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 TimetableWidget.updateAll(getApplication())
                 if (changed) NotificationHelper.showTimetableChanged(getApplication())
             }
-            _state.update { it.copy(today = request.date, myTimetable = rows) }
+            _state.update { it.copy(today = request.date, myTimetable = rows, timetableError = "") }
         }
     }
 

@@ -1101,6 +1101,7 @@ private fun TodayScreen(
                             )
                             Text(
                                 when {
+                                    rows.isEmpty() && state.message.isNotBlank() -> "시간표를 불러오지 못했습니다."
                                     !isToday && rows.isEmpty() -> "등록된 수업이 없습니다."
                                     !isToday -> "총 ${rows.size}개 수업이 있습니다."
                                     rows.isEmpty() -> "오늘 등록된 수업이 없습니다."

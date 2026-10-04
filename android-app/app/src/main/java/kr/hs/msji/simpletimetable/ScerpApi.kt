@@ -12,6 +12,17 @@ class ScerpApiException(
     message: String
 ) : IllegalStateException(message)
 
+
+internal fun collapseSharedCommonEvents(rows: List<TimetableItem>): List<TimetableItem> {
+    val meaningful = rows.filter { it.subject.isNotBlank() }
+    if (meaningful.isEmpty()) return emptyList()
+    if (meaningful.any { it.teacher.isNotBlank() }) return emptyList()
+    return meaningful
+        .distinctBy { listOf(it.date, it.period.toString(), it.subject).joinToString("|") }
+        .map { it.copy(grade = 0, classCode = "전체") }
+        .sortedWith(compareBy<TimetableItem> { it.period }.thenBy { it.subject })
+}
+
 class ScerpApi(
     private val store: LocalStore? = null,
     private val applySessionUpdate: (() -> Unit) -> Unit = { it() }
@@ -168,14 +179,16 @@ class ScerpApi(
         // 일부 SCERP 시간표 응답은 개인 식별 필드를 생략할 수 있으므로,
         // 전체 학급 시간표에서 교사명으로 한 번 더 조회한다.
         val publicRows = request("/api/public/timetable$q").optJSONArray("data") ?: JSONArray()
-        val fallbackMatches = buildList {
+        val publicItems = buildList {
             for (i in 0 until publicRows.length()) {
                 val row = publicRows.optJSONObject(i) ?: continue
-                if (!teacherMatches(displayName, teacherName(row))) continue
                 rowToTimetable(row, date)?.let(::add)
             }
         }
-        return distinctTimetable(fallbackMatches)
+        val fallbackMatches = publicItems.filter { teacherMatches(displayName, it.teacher) }
+        if (fallbackMatches.isNotEmpty()) return distinctTimetable(fallbackMatches)
+
+        return collapseSharedCommonEvents(publicItems)
     }
 
     fun fetchPublicTimetable(date: String): List<TimetableItem> {

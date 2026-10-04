@@ -13,13 +13,29 @@ class ScerpApiException(
 ) : IllegalStateException(message)
 
 
+private val REGULAR_EXAM_VARIANT = Regex("^\\d+차\\s*정기시험$")
+
 internal fun collapseSharedCommonEvents(rows: List<TimetableItem>): List<TimetableItem> {
     val meaningful = rows.filter { it.subject.isNotBlank() }
     if (meaningful.isEmpty()) return emptyList()
     if (meaningful.any { it.teacher.isNotBlank() }) return emptyList()
+
     return meaningful
-        .distinctBy { listOf(it.date, it.period.toString(), it.subject).joinToString("|") }
-        .map { it.copy(grade = 0, classCode = "전체") }
+        .groupBy { it.date to it.period }
+        .values
+        .flatMap { periodRows ->
+            val distinct = periodRows.distinctBy { it.subject }
+            val examVariants = distinct.filter { REGULAR_EXAM_VARIANT.matches(it.subject.trim()) }
+            val otherEvents = distinct.filterNot { REGULAR_EXAM_VARIANT.matches(it.subject.trim()) }
+            buildList {
+                if (examVariants.size > 1) {
+                    add(examVariants.first().copy(subject = "정기시험", grade = 0, classCode = "전체"))
+                } else {
+                    addAll(examVariants.map { it.copy(grade = 0, classCode = "전체") })
+                }
+                addAll(otherEvents.map { it.copy(grade = 0, classCode = "전체") })
+            }
+        }
         .sortedWith(compareBy<TimetableItem> { it.period }.thenBy { it.subject })
 }
 

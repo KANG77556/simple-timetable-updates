@@ -48,6 +48,20 @@ class SharedCommonEventTimetableTest {
         assertEquals(listOf("진로교육", "체육대회"), result.map { it.subject })
     }
 
+    @Test fun mergesExamVariantsWhilePreservingOtherEventsInSamePeriod() {
+        val rows = listOf(
+            TimetableItem(date, 1, "경영1", 1, "1차 정기시험"),
+            TimetableItem(date, 3, "경영1", 1, "2차 정기시험"),
+            TimetableItem(date, 2, "경영1", 1, "진로교육")
+        )
+
+        val result = collapseSharedCommonEvents(rows)
+
+        assertEquals(listOf("정기시험", "진로교육"), result.map { it.subject }.sorted())
+        assertTrue(result.all { it.period == 1 })
+    }
+
+
     @Test fun doesNotTreatNormalTeacherRowsAsCommonEvents() {
         val rows = listOf(
             TimetableItem(date, 1, "경영1", 1, "회계", "강성호", "실습실"),

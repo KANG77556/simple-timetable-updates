@@ -334,14 +334,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun moveAllWeek(weeks: Long) = viewModelScope.launch(Dispatchers.IO) {
         val base = runCatching { LocalDate.parse(_state.value.today) }.getOrDefault(LocalDate.now())
-        runTask { refreshAllWeekDirect(base.plusWeeks(weeks).toString()) }
+        val target = base.plusWeeks(weeks).toString()
+        _state.update { it.copy(today = target) }
+        runTask { refreshAllWeekDirect(target) }
     }
 
     private fun refreshAllWeekDirect(anchorDate: String) {
         val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrDefault(LocalDate.now())
         val monday = anchor.minusDays((anchor.dayOfWeek.value - 1).toLong())
-        val dates = (0L..4L).map { monday.plusDays(it) }
-        val rows = dates.flatMap { api.fetchPublicTimetable(it.toString()) }
+        val friday = monday.plusDays(4)
+        val rows = api.fetchPublicTimetableRange(monday.toString(), friday.toString())
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 

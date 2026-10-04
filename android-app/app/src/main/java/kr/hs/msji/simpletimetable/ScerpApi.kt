@@ -207,13 +207,16 @@ class ScerpApi(
         return collapseSharedCommonEvents(publicItems)
     }
 
-    fun fetchPublicTimetable(date: String): List<TimetableItem> {
-        val q = "?from=${URLEncoder.encode(date, "UTF-8")}&to=${URLEncoder.encode(date, "UTF-8")}"
+    fun fetchPublicTimetable(date: String): List<TimetableItem> =
+        fetchPublicTimetableRange(date, date)
+
+    fun fetchPublicTimetableRange(fromDate: String, toDate: String): List<TimetableItem> {
+        val q = "?from=${URLEncoder.encode(fromDate, "UTF-8")}&to=${URLEncoder.encode(toDate, "UTF-8")}"
         val arr = request("/api/public/timetable$q").optJSONArray("data") ?: JSONArray()
         return buildList {
             for (i in 0 until arr.length()) {
                 val row = arr.optJSONObject(i) ?: continue
-                val item = rowToTimetable(row, date) ?: continue
+                val item = rowToTimetable(row, fromDate) ?: continue
                 if (item.grade <= 0 || item.classCode.isBlank()) continue
                 add(item)
             }

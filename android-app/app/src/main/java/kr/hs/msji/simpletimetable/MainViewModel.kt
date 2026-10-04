@@ -94,7 +94,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val profile = try {
                 timetableApi(request).login(loginId, password)
             } catch (e: Exception) {
-                handleTaskError(e)
+                timetableRequests.applyIfCurrent(request) {
+                    handleTaskError(e)
+                }
                 return@launchTimetableRequest
             }
             // Publish the account only while this login still owns the request generation.

@@ -1,7 +1,7 @@
 {
-  "versionCode": 84,
-  "versionName": "0.3.78",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.78/MilseongJeil-v0.3.78.apk",
-  "sha256": "49360d9af9f4df23205d7913e1f85b3a2913ae5a23cfb67008a8eaa4618bfe6c",
-  "notes": "v0.3.78: SCERP 공유 시간표의 시험·공통 행사일을 개인 시간표 화면에도 표시하고 빈 특례 슬롯 때문에 전체 일정이 사라지지 않도록 수정했습니다."
+  "versionCode": 85,
+  "versionName": "0.3.79",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.79/MilseongJeil-v0.3.79.apk",
+  "sha256": "a29fbffc72cdc07dee44630e4c3d1a5461ead90e30aebea7f210b7aa8f17554d",
+  "notes": "v0.3.79: 전체 시간표의 이전·다음 주 이동을 5회 순차 요청에서 주간 1회 요청으로 최적화해 로딩 시간을 크게 줄였습니다."
 }

@@ -1115,6 +1115,22 @@ private fun TodayScreen(
             }
         }
 
+        if (state.timetableError.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+            ) {
+                Text(
+                    state.timetableError,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+
         Spacer(Modifier.height(10.dp))
 
         if (isToday) {

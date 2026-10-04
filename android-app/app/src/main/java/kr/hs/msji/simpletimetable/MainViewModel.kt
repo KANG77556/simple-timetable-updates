@@ -89,7 +89,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(loginId: String, password: String): Job {
         val request = beginTimetableRequest(LocalDate.now().toString())
-        return launchTimetableRequest(request) {
+        return launchTimetableRequest(request, onError = ::handleTaskError) {
             val previousUserId = store.userId
             val profile = timetableApi(request).login(loginId, password)
             // Publish the account only while this login still owns the request generation.
@@ -155,21 +155,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun launchTimetableRequest(request: TimetableRequests.Request, block: () -> Unit): Job =
+    private fun launchTimetableRequest(
+        request: TimetableRequests.Request,
+        onError: ((Exception) -> Unit)? = null,
+        block: () -> Unit
+    ): Job =
         viewModelScope.launch(Dispatchers.IO) {
             timetableRequests.execute(
                 request,
                 block = block,
                 onError = { error ->
-                    val apiError = error as? ScerpApiException
-                    if (apiError?.code == "authentication_required") {
-                        handleTaskError(error)
+                    if (onError != null) {
+                        onError(error)
                     } else {
-                        timetableRequests.applyIfCurrent(request) {
-                            _state.update {
-                                it.copy(
-                                    timetableError = apiError?.message ?: error.message ?: "시간표를 불러오지 못했습니다."
-                                )
+                        val apiError = error as? ScerpApiException
+                        if (apiError?.code == "authentication_required") {
+                            handleTaskError(error)
+                        } else {
+                            timetableRequests.applyIfCurrent(request) {
+                                _state.update {
+                                    it.copy(
+                                        timetableError = apiError?.message ?: error.message ?: "시간표를 불러오지 못했습니다."
+                                    )
+                                }
                             }
                         }
                     }

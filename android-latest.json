@@ -1,7 +1,7 @@
 {
-  "versionCode": 86,
-  "versionName": "0.3.80",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.80/MilseongJeil-v0.3.80.apk",
-  "sha256": "10137fa45ebe0cb79d28fdf00d6efcf504fea09e7a51d2b3190c8e1f538b8f4c",
-  "notes": "v0.3.80: 시간표 서버 연결이 일시적으로 끊길 때 자동 재시도하고, 갱신 실패·로그인 오류·오래된 응답을 분리 처리해 안정성을 높였습니다."
+  "versionCode": 87,
+  "versionName": "0.3.81",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.81/MilseongJeil-v0.3.81.apk",
+  "sha256": "61551de6475af6e3989dabe087b6110442619b1fd35e265b9106002b3d68649c",
+  "notes": "v0.3.81: 시간표 대기 시간을 줄이고 날짜·주간 캐시를 기기에 저장해 재방문 시 즉시 표시하며, 느린 서버 응답 때문에 오래 멈춰 보이는 현상을 개선했습니다."
 }

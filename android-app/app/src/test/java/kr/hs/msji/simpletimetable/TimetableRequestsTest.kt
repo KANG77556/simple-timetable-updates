@@ -5,6 +5,9 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.Executors
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import kotlinx.coroutines.CancellationException
 
 class TimetableRequestsTest {
@@ -12,6 +15,19 @@ class TimetableRequestsTest {
     private val yesterday = "2026-10-01"
     private fun rows(date: String, subject: String = "회계") =
         listOf(TimetableItem(date, 1, "경영1", 1, subject, "교사", "101"))
+
+    @Test fun connectionAbortRetriesButTimeoutAndDnsDoNot() {
+        assertTrue(shouldRetryScerpGet(SocketException("Software caused connection abort")))
+        assertTrue(shouldRetryScerpGet(SocketException("Connection reset")))
+        assertFalse(shouldRetryScerpGet(SocketTimeoutException("Read timed out")))
+        assertFalse(shouldRetryScerpGet(UnknownHostException("offline")))
+    }
+
+    @Test fun timetableTimeoutsStayWithinFastUiBudget() {
+        assertEquals(5_000, SCERP_CONNECT_TIMEOUT_MS)
+        assertEquals(8_000, SCERP_READ_TIMEOUT_MS)
+        assertEquals(200L, SCERP_RETRY_DELAY_MS)
+    }
 
     @Test fun loginKeepsLoadingEvenWhenPersistedRowsAreVisible() {
         val persisted = rows(today)

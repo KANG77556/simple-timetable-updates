@@ -98,6 +98,28 @@ class LocalStore(context: Context) {
         get() = prefs.getString("today_timetable", "[]") ?: "[]"
         set(value) = prefs.edit().putString("today_timetable", value).apply()
 
+    private fun timetableCacheKey(userId: String, date: String): String =
+        "timetable_cache_v1__" + userId.trim() + "__" + date
+
+    fun loadTimetableCacheJson(userId: String, date: String): String? =
+        prefs.getString(timetableCacheKey(userId, date), null)
+
+    fun saveTimetableCacheJson(userId: String, date: String, raw: String) {
+        if (userId.isBlank() || date.isBlank()) return
+        prefs.edit().putString(timetableCacheKey(userId, date), raw).apply()
+    }
+
+    private fun publicWeekCacheKey(monday: String): String =
+        "public_week_timetable_v1__" + monday
+
+    fun loadPublicWeekTimetableJson(monday: String): String? =
+        prefs.getString(publicWeekCacheKey(monday), null)
+
+    fun savePublicWeekTimetableJson(monday: String, raw: String) {
+        if (monday.isBlank()) return
+        prefs.edit().putString(publicWeekCacheKey(monday), raw).apply()
+    }
+
     fun saveMemos(items: List<MemoItem>) {
         val arr = JSONArray()
         items.forEach { memo ->

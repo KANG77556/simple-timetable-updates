@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 시간표 서버 연결이 일시적으로 끊길 때 자동 재시도하고, 갱신 실패·로그인 오류·오래된 응답을 분리 처리해 안정성을 높였습니다."
+              --notes "v$VERSION_NAME: 시간표 대기 시간을 줄이고 날짜·주간 캐시를 기기에 저장해 재방문 시 즉시 표시하며, 느린 서버 응답 때문에 오래 멈춰 보이는 현상을 개선했습니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 시간표 서버 연결이 일시적으로 끊길 때 자동 재시도하고, 갱신 실패·로그인 오류·오래된 응답을 분리 처리해 안정성을 높였습니다."
+            "notes": "v$VERSION_NAME: 시간표 대기 시간을 줄이고 날짜·주간 캐시를 기기에 저장해 재방문 시 즉시 표시하며, 느린 서버 응답 때문에 오래 멈춰 보이는 현상을 개선했습니다."
           }
           EOF
 

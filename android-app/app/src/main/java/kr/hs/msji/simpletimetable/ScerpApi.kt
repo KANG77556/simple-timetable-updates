@@ -5,10 +5,8 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketException
-import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
-import java.net.UnknownHostException
 
 class ScerpApiException(
     val status: Int,
@@ -16,6 +14,15 @@ class ScerpApiException(
     message: String
 ) : IllegalStateException(message)
 
+
+internal const val SCERP_CONNECT_TIMEOUT_MS = 5_000
+internal const val SCERP_READ_TIMEOUT_MS = 8_000
+internal const val SCERP_RETRY_DELAY_MS = 200L
+
+internal fun shouldRetryScerpGet(error: IOException): Boolean =
+    error is SocketException ||
+        error.message?.contains("connection abort", ignoreCase = true) == true ||
+        error.message?.contains("connection reset", ignoreCase = true) == true
 
 private val REGULAR_EXAM_VARIANT = Regex("^\\d+차\\s*정기시험$")
 
@@ -59,9 +66,9 @@ class ScerpApi(
             try {
                 return requestOnce(path, method, body)
             } catch (e: IOException) {
-                if (!isTransientNetworkError(e) || !retryable) throw networkException(e)
+                if (!shouldRetryScerpGet(e) || !retryable) throw networkException(e)
                 lastNetworkError = e
-                if (attempt == 0) Thread.sleep(350)
+                if (attempt == 0) Thread.sleep(SCERP_RETRY_DELAY_MS)
             }
         }
 
@@ -72,8 +79,8 @@ class ScerpApi(
         val connection = URL(BASE_URL + path).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
+            connection.connectTimeout = SCERP_CONNECT_TIMEOUT_MS
+            connection.readTimeout = SCERP_READ_TIMEOUT_MS
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("Origin", BASE_URL)
             connection.setRequestProperty("User-Agent", "SimpleTimetable-Android/${BuildConfig.VERSION_NAME}")
@@ -113,13 +120,6 @@ class ScerpApi(
             connection.disconnect()
         }
     }
-
-    private fun isTransientNetworkError(error: IOException): Boolean =
-        error is SocketException ||
-            error is SocketTimeoutException ||
-            error is UnknownHostException ||
-            error.message?.contains("connection abort", ignoreCase = true) == true ||
-            error.message?.contains("connection reset", ignoreCase = true) == true
 
     private fun networkException(error: IOException): ScerpApiException =
         ScerpApiException(

@@ -86,6 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val timetableRequests = TimetableRequests()
     private val timetableCache = ConcurrentHashMap<String, List<TimetableItem>>()
+    private val allTimetableCache = ConcurrentHashMap<String, List<TimetableItem>>()
 
     init {
         if (_state.value.loggedIn) {
@@ -95,6 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val persisted = _state.value.myTimetable
                 if (persisted.isNotEmpty() && persisted.all { it.date == today }) {
                     timetableCache[timetableCacheKey(userId, today)] = persisted
+                    store.saveTimetableCacheJson(userId, today, encodeTimetable(persisted))
                 }
                 startTimetableRefresh(today, userId)
             }
@@ -213,7 +215,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
     private fun startTimetableRefresh(date: String, userId: String): Job {
-        val cachedRows = timetableCache[timetableCacheKey(userId, date)]
+        val cacheKey = timetableCacheKey(userId, date)
+        val cachedRows = timetableCache[cacheKey]
+            ?: store.loadTimetableCacheJson(userId, date)
+                ?.let(::decodeTimetable)
+                ?.also { timetableCache[cacheKey] = it }
         val request = beginTimetableRequest(date, cachedRows)
         return launchTimetableRequest(request) { executeTimetableRequest(request, userId) }
     }
@@ -229,6 +235,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
         val rows = timetableApi(request).fetchMyTimetable(request.date, userId, displayName)
         timetableCache[timetableCacheKey(userId, request.date)] = rows
+        store.saveTimetableCacheJson(userId, request.date, encodeTimetable(rows))
         val applied = timetableRequests.applyIfCurrent(request) {
             if (request.date == LocalDate.now().toString()) {
                 val changed = timetableChangedForDate(request.date, before, rows)
@@ -253,6 +260,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     ScerpApi(store) { _ -> }.fetchMyTimetable(dateKey, userId, displayName)
                 }.onSuccess { rows ->
                     timetableCache.putIfAbsent(cacheKey, rows)
+                    store.saveTimetableCacheJson(userId, dateKey, encodeTimetable(rows))
                 }
             }
         }
@@ -260,8 +268,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun preloadAllIfNeeded() {
         if (!_state.value.loggedIn || _state.value.allTimetable.isNotEmpty()) return
+        val anchor = _state.value.today
+        publishCachedAllTimetable(anchor)
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { refreshAllWeekDirect(_state.value.today) }
+            runCatching { refreshAllWeekDirect(anchor) }
         }
     }
 
@@ -398,21 +408,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshAll(date: String = _state.value.today) = viewModelScope.launch(Dispatchers.IO) {
-        runTask { refreshAllWeekDirect(date) }
+        if (publishCachedAllTimetable(date)) {
+            try {
+                refreshAllWeekDirect(date)
+            } catch (e: Exception) {
+                handleTaskError(e)
+            }
+        } else {
+            runTask { refreshAllWeekDirect(date) }
+        }
     }
 
     fun moveAllWeek(weeks: Long) = viewModelScope.launch(Dispatchers.IO) {
         val base = runCatching { LocalDate.parse(_state.value.today) }.getOrDefault(LocalDate.now())
         val target = base.plusWeeks(weeks).toString()
         _state.update { it.copy(today = target) }
-        runTask { refreshAllWeekDirect(target) }
+        if (publishCachedAllTimetable(target)) {
+            try {
+                refreshAllWeekDirect(target)
+            } catch (e: Exception) {
+                handleTaskError(e)
+            }
+        } else {
+            runTask { refreshAllWeekDirect(target) }
+        }
+    }
+
+    private fun weekMonday(anchorDate: String): LocalDate {
+        val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrDefault(LocalDate.now())
+        return anchor.minusDays((anchor.dayOfWeek.value - 1).toLong())
+    }
+
+    private fun publishCachedAllTimetable(anchorDate: String): Boolean {
+        val monday = weekMonday(anchorDate)
+        val key = monday.toString()
+        val cached = allTimetableCache[key]
+            ?: store.loadPublicWeekTimetableJson(key)
+                ?.let(::decodeTimetable)
+                ?.also { allTimetableCache[key] = it }
+            ?: return false
+        val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrDefault(LocalDate.now())
+        _state.update { it.copy(allTimetable = cached, today = anchor.toString(), loading = false) }
+        return true
     }
 
     private fun refreshAllWeekDirect(anchorDate: String) {
         val anchor = runCatching { LocalDate.parse(anchorDate) }.getOrDefault(LocalDate.now())
-        val monday = anchor.minusDays((anchor.dayOfWeek.value - 1).toLong())
+        val monday = weekMonday(anchorDate)
         val friday = monday.plusDays(4)
         val rows = api.fetchPublicTimetableRange(monday.toString(), friday.toString())
+        val key = monday.toString()
+        allTimetableCache[key] = rows
+        store.savePublicWeekTimetableJson(key, encodeTimetable(rows))
         _state.value = _state.value.copy(allTimetable = rows, today = anchor.toString())
     }
 

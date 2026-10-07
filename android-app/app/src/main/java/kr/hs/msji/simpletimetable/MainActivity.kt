@@ -154,6 +154,12 @@ internal const val COMPACT_BOTTOM_NAV_HEIGHT_DP = 72
 internal fun bottomNavigationTotalHeightDp(bottomInsetDp: Int): Int =
     COMPACT_BOTTOM_NAV_HEIGHT_DP + bottomInsetDp.coerceAtLeast(0)
 
+internal fun calendarCellCount(leadingBlankCount: Int, daysInMonth: Int): Int {
+    val usedCells = leadingBlankCount.coerceIn(0, 6) + daysInMonth.coerceAtLeast(1)
+    val weekCount = ((usedCells + 6) / 7).coerceIn(4, 6)
+    return weekCount * 7
+}
+
 @Composable
 private fun AppTabIcon(tab: AppTab) {
     val image = when (tab) {
@@ -3246,7 +3252,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
     val leadingBlankCount = firstDay.dayOfWeek.value % 7
     val daysInMonth = visibleMonth.lengthOfMonth()
     val cells = remember(visibleMonth) {
-        List(42) { index ->
+        List(calendarCellCount(leadingBlankCount, daysInMonth)) { index ->
             val day = index - leadingBlankCount + 1
             if (day in 1..daysInMonth) visibleMonth.atDay(day) else null
         }
@@ -3435,7 +3441,8 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                                                 holiday,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.error,
-                                                maxLines = 1,
+                                                maxLines = 2,
+                                                textAlign = TextAlign.Center,
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         } else if (lessonCount > 0) {

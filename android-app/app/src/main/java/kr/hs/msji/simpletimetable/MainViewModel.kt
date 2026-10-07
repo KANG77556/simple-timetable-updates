@@ -57,27 +57,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var calendarTimetableJob: Job? = null
     private val calendarTimetableLoadedDates = mutableSetOf<String>()
     private val noteMutationLocks = ConcurrentHashMap<String, Mutex>()
-    private val initialNotePages = run {
-        store.ensureNoteAccount(store.userId)
-        store.loadNotePages()
-    }
-    private val initialMemos = store.loadMemos().let { items ->
-        val cutoff = System.currentTimeMillis() - trashRetentionMillis
-        val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
-        if (cleaned.size != items.size) store.saveMemos(cleaned)
-        cleaned
-    }
+    private val startupUserId = store.userId
+    private val startupLoggedIn = startupUserId.isNotBlank() && store.sessionCookie.isNotBlank()
     private val _state = MutableStateFlow(
         AppUiState(
-            loggedIn = store.userId.isNotBlank() && store.sessionCookie.isNotBlank(),
-            profile = UserProfile(store.userId, store.displayName),
-            myTimetable = decodeTimetable(store.latestTimetableJson),
-            memos = initialMemos,
-            notePages = initialNotePages,
-            todos = store.loadTodos(),
-            calendar = store.loadCalendar(),
+            loggedIn = startupLoggedIn,
+            profile = UserProfile(startupUserId, store.displayName),
             lastLoginId = store.loginId,
-            message = if (store.userId.isNotBlank() && store.sessionCookie.isBlank()) {
+            message = if (startupUserId.isNotBlank() && store.sessionCookie.isBlank()) {
                 "업데이트 후 최초 1회 로그인이 필요합니다."
             } else ""
         )
@@ -89,18 +76,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val allTimetableCache = ConcurrentHashMap<String, List<TimetableItem>>()
 
     init {
-        if (_state.value.loggedIn) {
-            val userId = _state.value.profile.userId.ifBlank { store.userId }
-            val today = LocalDate.now().toString()
-            if (userId.isNotBlank()) {
-                val persisted = _state.value.myTimetable
-                if (persisted.isNotEmpty() && persisted.all { it.date == today }) {
-                    timetableCache[timetableCacheKey(userId, today)] = persisted
-                    store.saveTimetableCacheJson(userId, today, encodeTimetable(persisted))
-                }
-                startTimetableRefresh(today, userId)
-            }
+        // Keep Android's launch path free of JSON parsing and note migration work.
+        // A large or damaged local dataset must never hold the system splash screen.
+        viewModelScope.launch(Dispatchers.IO) {
+            hydrateStartupState()
         }
+    }
+
+    private fun hydrateStartupState() {
+        store.ensureNoteAccount(startupUserId)
+        val initialNotePages = store.loadNotePages()
+        val initialMemos = store.loadMemos().let { items ->
+            val cutoff = System.currentTimeMillis() - trashRetentionMillis
+            val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
+            if (cleaned.size != items.size) store.saveMemos(cleaned)
+            cleaned
+        }
+        val initialTodos = store.loadTodos()
+        val initialCalendar = store.loadCalendar()
+        val persistedTimetable = decodeTimetable(store.latestTimetableJson)
+
+        _state.update { current ->
+            val sameStartupAccount = current.profile.userId == startupUserId
+            current.copy(
+                myTimetable = if (sameStartupAccount) persistedTimetable else current.myTimetable,
+                memos = initialMemos,
+                notePages = if (sameStartupAccount) initialNotePages else current.notePages,
+                todos = initialTodos,
+                calendar = initialCalendar
+            )
+        }
+
+        if (!startupLoggedIn || startupUserId.isBlank()) return
+        val current = _state.value
+        if (!current.loggedIn || current.profile.userId != startupUserId) return
+
+        val today = LocalDate.now().toString()
+        if (persistedTimetable.isNotEmpty() && persistedTimetable.all { it.date == today }) {
+            timetableCache[timetableCacheKey(startupUserId, today)] = persistedTimetable
+            store.saveTimetableCacheJson(startupUserId, today, encodeTimetable(persistedTimetable))
+        }
+        startTimetableRefresh(today, startupUserId)
     }
 
     fun login(loginId: String, password: String): Job {
@@ -985,4 +1001,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.getOrDefault(emptyList())
     }
 }
-

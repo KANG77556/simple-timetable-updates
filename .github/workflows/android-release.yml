@@ -108,7 +108,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 시간표 대기 시간을 줄이고 날짜·주간 캐시를 기기에 저장해 재방문 시 즉시 표시하며, 느린 서버 응답 때문에 오래 멈춰 보이는 현상을 개선했습니다."
+              --notes "v$VERSION_NAME: 앱 시작 시 로컬 데이터 복원과 시간표 갱신을 백그라운드로 분리해 시작 화면에서 멈추는 현상을 방지했습니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -117,7 +117,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 시간표 대기 시간을 줄이고 날짜·주간 캐시를 기기에 저장해 재방문 시 즉시 표시하며, 느린 서버 응답 때문에 오래 멈춰 보이는 현상을 개선했습니다."
+            "notes": "v$VERSION_NAME: 앱 시작 시 로컬 데이터 복원과 시간표 갱신을 백그라운드로 분리해 시작 화면에서 멈추는 현상을 방지했습니다."
           }
           EOF
 

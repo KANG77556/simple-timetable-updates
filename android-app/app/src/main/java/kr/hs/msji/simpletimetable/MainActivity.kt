@@ -3423,7 +3423,7 @@ private fun CalendarScreen(state: AppUiState, vm: MainViewModel) {
                                     }
                                 ) {
                                     Column(
-                                        modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 4.dp),
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 2.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text(

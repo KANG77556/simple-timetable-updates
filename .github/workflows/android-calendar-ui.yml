@@ -49,3 +49,4 @@ jobs:
           path: |
             android-app/app/build/reports/androidTests/
             android-app/app/build/outputs/androidTest-results/
+          retention-days: 7

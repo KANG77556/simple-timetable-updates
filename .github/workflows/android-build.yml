@@ -51,8 +51,10 @@ jobs:
         with:
           name: SCERP-Android-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: SCERP-Android-release-unsigned
           path: android-app/app/build/outputs/apk/release/*.apk
+          retention-days: 7

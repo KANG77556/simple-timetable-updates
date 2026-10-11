@@ -676,7 +676,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         lock.withLock {
             val removed = _state.value.notePages.firstOrNull { it.id == id } ?: return@withLock
             val trash = store.loadTrashedNotePages().filterNot { it.id == id } + removed
-            store.saveTrashedNotePages(trash)
+            if (!store.saveTrashedNotePages(trash)) {
+                _state.update { it.copy(message = "휴지통 저장에 실패했습니다. 원본 페이지는 삭제하지 않았습니다.") }
+                return@withLock
+            }
             _trashedNotes.value = trash
             val next = _state.value.notePages.filterNot { it.id == id }
             store.markNoteDeleted(id)
@@ -710,7 +713,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         withLocks {
             val removed = _state.value.notePages.filter { it.id in ids }
             val trash = store.loadTrashedNotePages().filterNot { it.id in ids } + removed
-            store.saveTrashedNotePages(trash)
+            if (!store.saveTrashedNotePages(trash)) {
+                _state.update { it.copy(message = "휴지통 저장에 실패했습니다. 원본 페이지는 삭제하지 않았습니다.") }
+                return@withLock
+            }
             _trashedNotes.value = trash
             val next = _state.value.notePages.filterNot { it.id in ids }
             ids.forEach { store.markNoteDeleted(it) }

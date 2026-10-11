@@ -1,7 +1,7 @@
 {
-  "versionCode": 88,
-  "versionName": "0.3.82",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.82/MilseongJeil-v0.3.82.apk",
-  "sha256": "7f54365a2f201b22abe9b17d6d142c7b55d2728d66a92acc67f4d32946ad6eac",
-  "notes": "v0.3.82: 앱 시작 시 로컬 데이터 복원과 시간표 갱신을 백그라운드로 분리해 시작 화면에서 멈추는 현상을 방지했습니다."
+  "versionCode": 89,
+  "versionName": "0.3.83",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.83/MilseongJeil-v0.3.83.apk",
+  "sha256": "14b6cf937be60c5c5fa625db178d55e50436d4fdabb01d9a83abf2c7c67c52e4",
+  "notes": "v0.3.83: 초기 메모·할 일·캘린더 데이터 복원 전 저장을 차단하고 사용자가 선택한 날짜를 유지하도록 수정했습니다."
 }

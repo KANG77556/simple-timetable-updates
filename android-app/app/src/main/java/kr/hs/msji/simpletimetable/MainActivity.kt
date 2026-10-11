@@ -2599,7 +2599,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     }
     var dirty by remember(selected.id) { mutableStateOf(false) }
     LaunchedEffect(selected.id, selected.blocks) {
-        if (!dirty && blocks.all { it.content.isBlank() } && selected.blocks.any { it.content.isNotBlank() }) {
+        if (!dirty && blocks.all { it.content.isBlank() && !it.checked } && selected.blocks.isNotEmpty()) {
             blocks = selected.blocks
         }
     }

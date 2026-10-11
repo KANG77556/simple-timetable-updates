@@ -558,7 +558,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Only edits made after the upload snapshot outrank a successful server response.
         // Unchanged LOCAL/PENDING entries must be replaced by their SYNCED upload result.
         val newerLocal = latest.filter { page ->
-            page.syncState != "SYNCED" && (initialById[page.id] == null || initialById[page.id] != page)
+            // A concurrently completed save may already be SYNCED; it still owns newer data.
+            initialById[page.id] == null || initialById[page.id] != page
         }.associateBy { it.id }
         val latestDeleted = store.deletedNoteIds()
         val safeMerged = merged.filterNot { it.id in latestDeleted }

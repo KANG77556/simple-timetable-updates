@@ -715,7 +715,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val trash = store.loadTrashedNotePages().filterNot { it.id in ids } + removed
             if (!store.saveTrashedNotePages(trash)) {
                 _state.update { it.copy(message = "휴지통 저장에 실패했습니다. 원본 페이지는 삭제하지 않았습니다.") }
-                return@withLock
+                return@withLocks
             }
             _trashedNotes.value = trash
             val next = _state.value.notePages.filterNot { it.id in ids }

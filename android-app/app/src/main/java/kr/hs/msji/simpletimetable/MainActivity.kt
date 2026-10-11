@@ -2119,6 +2119,9 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var categoryFilter by remember { mutableStateOf("전체") }
+    var showTrash by remember { mutableStateOf(false) }
+    var pendingPermanentDelete by remember { mutableStateOf<String?>(null) }
+    val trashedNotes by vm.trashedNotes.collectAsState()
     var pendingDeletePage by remember { mutableStateOf<NotePage?>(null) }
     var multiSelectMode by remember { mutableStateOf(false) }
     var selectedPageIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -2160,7 +2163,11 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (multiSelectMode) {
+                if (showTrash) {
+                    TextButton(onClick = { showTrash = false }) { Text("‹ 메모") }
+                    Spacer(Modifier.weight(1f))
+                    Text("휴지통", style = MaterialTheme.typography.titleMedium)
+                } else if (multiSelectMode) {
                     Text(
                         selectedPageIds.size.toString() + "개 선택",
                         modifier = Modifier.weight(1f),
@@ -2200,6 +2207,10 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                             if (state.notesSyncing) "동기화 중…" else "동기화",
                             style = MaterialTheme.typography.labelLarge
                         )
+                    }
+                    TextButton(onClick = { showTrash = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                        Icon(Icons.Filled.Delete, contentDescription = "휴지통")
+                        Text("휴지통")
                     }
                     TextButton(
                         enabled = state.notePages.any { !it.archived },
@@ -2243,6 +2254,38 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                 }
             }
 
+            if (showTrash) {
+                Spacer(Modifier.height(12.dp))
+                Text("삭제한 페이지는 복원하거나 영구 삭제할 수 있습니다.", style = MaterialTheme.typography.bodySmall)
+                if (trashedNotes.isEmpty()) {
+                    Spacer(Modifier.height(28.dp))
+                    Text("휴지통이 비어 있습니다.")
+                }
+                trashedNotes.forEach { page ->
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(page.title.ifBlank { "제목 없음" })
+                            Text(page.category, style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick = { vm.restoreTrashedNote(page.id) }) { Text("복원") }
+                        TextButton(onClick = { pendingPermanentDelete = page.id }) { Text("영구 삭제") }
+                    }
+                }
+                pendingPermanentDelete?.let { id ->
+                    AlertDialog(
+                        onDismissRequest = { pendingPermanentDelete = null },
+                        title = { Text("영구 삭제") },
+                        text = { Text("이 페이지를 휴지통에서 영구 삭제할까요? 복구할 수 없습니다.") },
+                        dismissButton = { TextButton(onClick = { pendingPermanentDelete = null }) { Text("취소") } },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                vm.permanentlyDeleteTrashedNote(id)
+                                pendingPermanentDelete = null
+                            }) { Text("영구 삭제") }
+                        }
+                    )
+                }
+            } else {
             Spacer(Modifier.height(2.dp))
 
             OutlinedTextField(
@@ -2567,6 +2610,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         }
                     }
                 )
+            }
             }
         }
         return

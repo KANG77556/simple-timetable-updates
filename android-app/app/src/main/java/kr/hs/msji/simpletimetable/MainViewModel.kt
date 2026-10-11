@@ -26,6 +26,8 @@ internal fun shouldShowTimetableLoading(
 
 data class AppUiState(
     val loading: Boolean = false,
+    val notesReady: Boolean = false,
+    val notesSyncing: Boolean = false,
     val loggedIn: Boolean = false,
     val profile: UserProfile = UserProfile(),
     val today: String = LocalDate.now().toString(),
@@ -103,6 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 myTimetable = if (sameStartupAccount && startupSafetyGate.navigationUntouched() && current.today == LocalDate.now().toString()) persistedTimetable else current.myTimetable,
                 memos = if (sameStartupAccount) initialMemos else current.memos,
                 notePages = if (sameStartupAccount) initialNotePages else current.notePages,
+                notesReady = true,
                 todos = if (sameStartupAccount) initialTodos else current.todos,
                 calendar = if (sameStartupAccount) initialCalendar else current.calendar
             )
@@ -518,8 +521,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
-        if (!ensureStartupCollectionsReady()) return@launch
-        runTask { refreshNotesDirect() }
+        if (!ensureStartupCollectionsReady() || _state.value.notesSyncing) return@launch
+        // Note synchronization must not block offline-first note creation or unrelated screens.
+        _state.update { it.copy(notesSyncing = true, message = "") }
+        try {
+            refreshNotesDirect()
+        } catch (e: Exception) {
+            handleTaskError(e)
+        } finally {
+            _state.update { it.copy(notesSyncing = false) }
+        }
     }
 
     private fun refreshNotesDirect() {
@@ -541,11 +552,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .plus(uploaded.filter { saved -> saved.id !in deletedIds && remote.none { it.id == saved.id } })
             .distinctBy { it.id }
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
-        store.saveNotePages(merged)
-        _state.value = _state.value.copy(
-            notePages = merged,
-            pinnedNoteCount = merged.count { it.pinned && !it.archived }
-        )
+        // Re-read the local state after network IO: edits created during sync must survive.
+        val latest = store.loadNotePages()
+        val latestPending = latest.filter { it.syncState != "SYNCED" }.associateBy { it.id }
+        val latestDeleted = store.deletedNoteIds()
+        val safeMerged = merged.filterNot { it.id in latestDeleted }
+            .map { latestPending[it.id] ?: it }
+            .plus(latestPending.values.filter { it.id !in latestDeleted && merged.none { remote -> remote.id == it.id } })
+            .distinctBy { it.id }
+            .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
+        store.saveNotePages(safeMerged)
+        _state.update { it.copy(
+            notePages = safeMerged,
+            pinnedNoteCount = safeMerged.count { page -> page.pinned && !page.archived }
+        ) }
     }
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {

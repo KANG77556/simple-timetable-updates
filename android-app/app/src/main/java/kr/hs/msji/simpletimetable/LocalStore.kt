@@ -299,9 +299,8 @@ class LocalStore(context: Context) {
             .apply()
     }
 
-    fun saveTrashedNotePages(items: List<NotePage>) {
+    fun saveTrashedNotePages(items: List<NotePage>): Boolean =
         prefs.edit().putString("note_trash_v1", serializeNotePages(items)).commit()
-    }
 
     fun loadTrashedNotePages(): List<NotePage> = decodeNotePages(prefs.getString("note_trash_v1", "[]") ?: "[]")
 

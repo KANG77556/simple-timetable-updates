@@ -2580,7 +2580,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var title by remember(selected.id, selected.title) { mutableStateOf(selected.title) }
     var category by remember(selected.id, selected.category) { mutableStateOf(selected.category) }
     var pinned by remember(selected.id, selected.pinned) { mutableStateOf(selected.pinned) }
-    var blocks by remember(selected.id, selected.blocks, state.loggedIn, selected.syncState) {
+    var blocks by remember(selected.id) {
         mutableStateOf(
             selected.blocks.ifEmpty {
                 if (!state.loggedIn || selected.syncState != "SYNCED") {
@@ -2598,6 +2598,11 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
         )
     }
     var dirty by remember(selected.id) { mutableStateOf(false) }
+    LaunchedEffect(selected.id, selected.blocks) {
+        if (!dirty && blocks.all { it.content.isBlank() } && selected.blocks.any { it.content.isNotBlank() }) {
+            blocks = selected.blocks
+        }
+    }
     var topMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var categoryMenuExpanded by remember(selected.id) { mutableStateOf(false) }
     var addMenuExpanded by remember(selected.id) { mutableStateOf(false) }
@@ -2689,9 +2694,10 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
             Text(
                 when {
                     dirty -> "저장 중…"
-                    selected.syncState == "PENDING" -> "동기화 중…"
+                    selected.syncState == "PENDING" -> "기기 저장됨 · 동기화 중…"
+                    selected.syncState == "FAILED" -> "기기 저장됨 · 동기화 실패"
                     selected.syncState == "SYNCED" -> "동기화됨 ✓"
-                    !state.loggedIn -> "오프라인"
+                    !state.loggedIn -> "기기 저장됨 · 오프라인"
                     else -> "저장됨"
                 },
                 style = MaterialTheme.typography.labelMedium,

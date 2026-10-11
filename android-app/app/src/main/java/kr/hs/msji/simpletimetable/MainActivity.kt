@@ -2126,8 +2126,8 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
     var newDraftPageId by remember { mutableStateOf<String?>(null) }
     val selected = state.notePages.firstOrNull { it.id == selectedId }
 
-    LaunchedEffect(Unit) {
-        if (state.loggedIn) vm.refreshNotes()
+    LaunchedEffect(state.loggedIn, state.notesReady) {
+        if (state.loggedIn && state.notesReady) vm.refreshNotes()
     }
 
     if (selectedId == null) {
@@ -2192,12 +2192,12 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     }
                 } else {
                     TextButton(
-                        enabled = state.loggedIn && !state.loading,
+                        enabled = state.loggedIn && state.notesReady && !state.notesSyncing,
                         onClick = { vm.refreshNotes() },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            if (state.loading) "동기화 중…" else "동기화",
+                            if (state.notesSyncing) "동기화 중…" else "동기화",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -2212,7 +2212,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                         Text("선택")
                     }
                     FilledTonalButton(
-                        enabled = !state.loading,
+                        enabled = state.notesReady,
                         modifier = Modifier.semantics { contentDescription = "새 페이지" },
                         onClick = {
                             val now = java.time.Instant.now().toString()
@@ -2313,7 +2313,7 @@ private fun MemoScreen(state: AppUiState, vm: MainViewModel) {
                     if (query.isBlank()) {
                         Spacer(Modifier.height(10.dp))
                         FilledTonalButton(
-                            enabled = !state.loading,
+                            enabled = state.notesReady,
                             onClick = {
                                 val now = java.time.Instant.now().toString()
                                 val page = NotePage(

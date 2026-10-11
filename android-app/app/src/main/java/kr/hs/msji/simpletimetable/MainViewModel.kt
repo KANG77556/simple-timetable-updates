@@ -57,6 +57,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var calendarTimetableJob: Job? = null
     private val calendarTimetableLoadedDates = mutableSetOf<String>()
     private val noteMutationLocks = ConcurrentHashMap<String, Mutex>()
+    private val startupSafetyGate = StartupSafetyGate()
     private val startupUserId = store.userId
     private val startupLoggedIn = startupUserId.isNotBlank() && store.sessionCookie.isNotBlank()
     private val _state = MutableStateFlow(
@@ -99,13 +100,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { current ->
             val sameStartupAccount = current.profile.userId == startupUserId
             current.copy(
-                myTimetable = if (sameStartupAccount) persistedTimetable else current.myTimetable,
-                memos = initialMemos,
+                myTimetable = if (sameStartupAccount && startupSafetyGate.navigationUntouched() && current.today == LocalDate.now().toString()) persistedTimetable else current.myTimetable,
+                memos = if (sameStartupAccount) initialMemos else current.memos,
                 notePages = if (sameStartupAccount) initialNotePages else current.notePages,
-                todos = initialTodos,
-                calendar = initialCalendar
+                todos = if (sameStartupAccount) initialTodos else current.todos,
+                calendar = if (sameStartupAccount) initialCalendar else current.calendar
             )
         }
+
+        startupSafetyGate.markHydrated()
 
         if (!startupLoggedIn || startupUserId.isBlank()) return
         val current = _state.value
@@ -116,7 +119,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             timetableCache[timetableCacheKey(startupUserId, today)] = persistedTimetable
             store.saveTimetableCacheJson(startupUserId, today, encodeTimetable(persistedTimetable))
         }
-        startTimetableRefresh(today, startupUserId)
+        startupSafetyGate.runStartupRefreshIfUntouched {
+            startTimetableRefresh(today, startupUserId)
+        }
+    }
+
+    private fun ensureStartupCollectionsReady(): Boolean {
+        if (startupSafetyGate.isHydrated()) return true
+        _state.update { it.copy(message = "기존 메모·할 일·일정 복원 중입니다. 완료 후 다시 시도해 주세요.") }
+        return false
     }
 
     fun login(loginId: String, password: String): Job {
@@ -160,7 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshToday() {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isNotBlank()) startTimetableRefresh(_state.value.today, userId)
+        if (userId.isNotBlank()) startupSafetyGate.runUserNavigation { startTimetableRefresh(_state.value.today, userId) }
     }
 
     fun moveDate(days: Long) {
@@ -178,7 +189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadDate(date: LocalDate) {
         val userId = _state.value.profile.userId.ifBlank { store.userId }
-        if (userId.isNotBlank()) startTimetableRefresh(date.toString(), userId)
+        if (userId.isNotBlank()) startupSafetyGate.runUserNavigation { startTimetableRefresh(date.toString(), userId) }
     }
 
     private fun timetableCacheKey(userId: String, date: String) = "$userId|$date"
@@ -507,10 +518,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshNotes() = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
         runTask { refreshNotesDirect() }
     }
 
     private fun refreshNotesDirect() {
+        if (!ensureStartupCollectionsReady()) return
         val local = store.loadNotePages()
         val uploaded = local.filter { it.syncState != "SYNCED" }.map { page -> api.saveNote(page) }
 
@@ -536,6 +549,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
         runTask {
             val fetched = api.fetchNote(id)
             val page = if (fetched.blocks.isEmpty()) {
@@ -561,6 +575,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveNotePage(page: NotePage) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
         val lock = noteMutationLocks.computeIfAbsent(page.id) { Mutex() }
         lock.withLock {
             val pending = page.copy(syncState = "PENDING")
@@ -595,6 +610,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
         val lock = noteMutationLocks.computeIfAbsent(id) { Mutex() }
         lock.withLock {
             val next = _state.value.notePages.filterNot { it.id == id }
@@ -613,6 +629,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun archiveNotePages(ids: Set<String>) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
         if (ids.isEmpty()) return@launch
 
         val orderedIds = ids.toList().sorted()
@@ -653,6 +670,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         priority: Int = 0,
         attachmentUris: List<String> = emptyList()
     ) {
+        if (!ensureStartupCollectionsReady()) return
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
         val checks = if (checklist) {
@@ -690,6 +708,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         priority: Int? = null,
         attachmentUris: List<String>? = null
     ) {
+        if (!ensureStartupCollectionsReady()) return
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map { memo ->
@@ -720,12 +739,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleMemoPin(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.memos.map { if (it.id == id) it.copy(pinned = !it.pinned, updatedAt = System.currentTimeMillis()) else it }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }
 
     fun toggleMemoCheck(id: Long, index: Int) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.memos.map { memo ->
             if (memo.id != id || index !in memo.checkItems.indices) memo else {
                 val checks = memo.checkItems.mapIndexed { i, item -> if (i == index) item.copy(done = !item.done) else item }
@@ -737,6 +758,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteMemo(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map {
             if (it.id == id) it.copy(deletedAt = now, pinned = false, updatedAt = now) else it
@@ -746,6 +768,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun restoreMemo(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map {
             if (it.id == id) it.copy(deletedAt = 0L, updatedAt = now) else it
@@ -755,12 +778,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun permanentlyDeleteMemo(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.memos.filterNot { it.id == id }
         store.saveMemos(list)
         _state.value = _state.value.copy(memos = list)
     }
 
     fun addMemoAttachments(id: Long, uris: List<String>) {
+        if (!ensureStartupCollectionsReady()) return
         if (uris.isEmpty()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map { memo ->
@@ -774,6 +799,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeMemoAttachment(id: Long, uri: String) {
+        if (!ensureStartupCollectionsReady()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map { memo ->
             if (memo.id != id) memo else memo.copy(
@@ -786,6 +812,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setMemoReminder(id: Long, triggerAt: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val memo = _state.value.memos.firstOrNull { it.id == id } ?: return
         if (triggerAt <= System.currentTimeMillis()) return
         val now = System.currentTimeMillis()
@@ -804,6 +831,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearMemoReminder(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val now = System.currentTimeMillis()
         val list = _state.value.memos.map {
             if (it.id == id) it.copy(reminderAt = 0L, updatedAt = now) else it
@@ -815,13 +843,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exportMemosJson(): String = store.exportMemosJson()
 
-    fun importMemosJson(raw: String): Boolean = runCatching {
+    fun importMemosJson(raw: String): Boolean {
+        if (!ensureStartupCollectionsReady()) return false
+        return runCatching {
         val list = store.importMemosJson(raw)
         _state.value = _state.value.copy(memos = list)
         true
     }.getOrDefault(false)
+    }
 
     fun cleanupExpiredTrash() {
+        if (!ensureStartupCollectionsReady()) return
         val cutoff = System.currentTimeMillis() - trashRetentionMillis
         val list = _state.value.memos.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
         if (list.size != _state.value.memos.size) {
@@ -831,6 +863,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleMemoArchive(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.memos.map {
             if (it.id == id) it.copy(archived = !it.archived, updatedAt = System.currentTimeMillis()) else it
         }
@@ -869,6 +902,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun memoDraftPriority(): Int = store.memoDraftPriority
 
     fun addTodo(text: String, dueDate: String) {
+        if (!ensureStartupCollectionsReady()) return
         val normalized = text.trim()
         if (normalized.isBlank()) return
         if (_state.value.todos.any { it.text == normalized && it.dueDate == dueDate }) return
@@ -882,12 +916,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleTodo(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.todos.map { if (it.id == id) it.copy(done = !it.done) else it }
         store.saveTodos(list)
         _state.value = _state.value.copy(todos = list)
     }
 
     fun deleteTodo(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.todos.filterNot { it.id == id }
         store.saveTodos(list)
         _state.value = _state.value.copy(todos = list)
@@ -899,6 +935,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addCalendar(title: String, date: String) {
+        if (!ensureStartupCollectionsReady()) return
         val normalized = title.trim()
         if (normalized.isBlank() || date.isBlank()) return
         if (_state.value.calendar.any { it.title == normalized && it.date == date }) return
@@ -912,6 +949,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteCalendar(id: Long) {
+        if (!ensureStartupCollectionsReady()) return
         val list = _state.value.calendar.filterNot { it.id == id }
         store.saveCalendar(list)
         _state.value = _state.value.copy(calendar = list)

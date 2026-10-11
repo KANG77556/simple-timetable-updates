@@ -554,11 +554,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
         // Re-read the local state after network IO: edits created during sync must survive.
         val latest = store.loadNotePages()
-        val latestPending = latest.filter { it.syncState != "SYNCED" }.associateBy { it.id }
+        val initialById = local.associateBy { it.id }
+        // Only edits made after the upload snapshot outrank a successful server response.
+        // Unchanged LOCAL/PENDING entries must be replaced by their SYNCED upload result.
+        val newerLocal = latest.filter { page ->
+            page.syncState != "SYNCED" && (initialById[page.id] == null || initialById[page.id] != page)
+        }.associateBy { it.id }
         val latestDeleted = store.deletedNoteIds()
         val safeMerged = merged.filterNot { it.id in latestDeleted }
-            .map { latestPending[it.id] ?: it }
-            .plus(latestPending.values.filter { it.id !in latestDeleted && merged.none { remote -> remote.id == it.id } })
+            .map { newerLocal[it.id] ?: it }
+            .plus(newerLocal.values.filter { it.id !in latestDeleted && merged.none { remote -> remote.id == it.id } })
             .distinctBy { it.id }
             .sortedWith(compareByDescending<NotePage> { it.pinned }.thenByDescending { it.updatedAt })
         store.saveNotePages(safeMerged)

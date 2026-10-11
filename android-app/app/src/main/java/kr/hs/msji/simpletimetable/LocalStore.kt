@@ -58,6 +58,7 @@ class LocalStore(context: Context) {
         val editor = prefs.edit()
 
         if (previous.isNotBlank() && (owner.isBlank() || owner == previous)) {
+            prefs.getString("note_trash_v1", null)?.let { editor.putString(scopedNoteKey("note_trash_v1", previous), it) }
             prefs.getString("note_pages_v1", null)?.let {
                 editor.putString(scopedNoteKey("note_pages_v1", previous), it)
             }
@@ -76,6 +77,7 @@ class LocalStore(context: Context) {
         val nextDeletedKey = scopedNoteKey("deleted_note_ids_v1", next)
 
         if (prefs.contains(nextPagesKey)) {
+            editor.putString("note_trash_v1", prefs.getString(scopedNoteKey("note_trash_v1", next), "[]") ?: "[]")
             editor.putString("note_pages_v1", prefs.getString(nextPagesKey, "[]") ?: "[]")
             editor.putBoolean(
                 "note_pages_initialized_v1",
@@ -86,6 +88,7 @@ class LocalStore(context: Context) {
                 prefs.getStringSet(nextDeletedKey, emptySet())?.toSet() ?: emptySet()
             )
         } else {
+            editor.remove("note_trash_v1")
             editor.remove("note_pages_v1")
             editor.remove("note_pages_initialized_v1")
             editor.remove("deleted_note_ids_v1")
@@ -256,7 +259,7 @@ class LocalStore(context: Context) {
         }
     }.getOrDefault(emptyList())
 
-    fun saveNotePages(items: List<NotePage>) {
+    private fun serializeNotePages(items: List<NotePage>): String {
         val arr = JSONArray()
         items.forEach { page ->
             val tags = JSONArray().also { a -> page.tags.forEach(a::put) }
@@ -286,11 +289,20 @@ class LocalStore(context: Context) {
                     .put("blocks", blocks)
             )
         }
+        return arr.toString()
+    }
+
+    fun saveNotePages(items: List<NotePage>) {
         prefs.edit()
-            .putString("note_pages_v1", arr.toString())
+            .putString("note_pages_v1", serializeNotePages(items))
             .putBoolean("note_pages_initialized_v1", true)
             .apply()
     }
+
+    fun saveTrashedNotePages(items: List<NotePage>): Boolean =
+        prefs.edit().putString("note_trash_v1", serializeNotePages(items)).commit()
+
+    fun loadTrashedNotePages(): List<NotePage> = decodeNotePages(prefs.getString("note_trash_v1", "[]") ?: "[]")
 
     fun deletedNoteIds(): Set<String> = prefs.getStringSet("deleted_note_ids_v1", emptySet())?.toSet() ?: emptySet()
 
@@ -304,9 +316,8 @@ class LocalStore(context: Context) {
         prefs.edit().putStringSet("deleted_note_ids_v1", deletedNoteIds() - id).apply()
     }
 
-    fun loadNotePages(): List<NotePage> {
-        val stored = runCatching {
-            val arr = JSONArray(prefs.getString("note_pages_v1", "[]"))
+    private fun decodeNotePages(raw: String): List<NotePage> = runCatching {
+            val arr = JSONArray(raw)
             (0 until arr.length()).map { i ->
                 val o = arr.getJSONObject(i)
                 val tagsJson = o.optJSONArray("tags") ?: JSONArray()
@@ -335,6 +346,9 @@ class LocalStore(context: Context) {
                 )
             }
         }.getOrDefault(emptyList())
+
+    fun loadNotePages(): List<NotePage> {
+        val stored = decodeNotePages(prefs.getString("note_pages_v1", "[]") ?: "[]")
         if (stored.isNotEmpty()) return stored
         if (prefs.getBoolean("note_pages_initialized_v1", false)) return emptyList()
 

@@ -73,6 +73,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     )
     val state: StateFlow<AppUiState> = _state
+    private val _trashedNotes = MutableStateFlow<List<NotePage>>(emptyList())
+    val trashedNotes: StateFlow<List<NotePage>> = _trashedNotes
 
     private val timetableRequests = TimetableRequests()
     private val timetableCache = ConcurrentHashMap<String, List<TimetableItem>>()
@@ -89,6 +91,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun hydrateStartupState() {
         store.ensureNoteAccount(startupUserId)
         val initialNotePages = store.loadNotePages()
+        val initialTrashedNotes = store.loadTrashedNotePages()
+        _trashedNotes.value = initialTrashedNotes
         val initialMemos = store.loadMemos().let { items ->
             val cutoff = System.currentTimeMillis() - trashRetentionMillis
             val cleaned = items.filterNot { it.deletedAt > 0L && it.deletedAt < cutoff }
@@ -152,6 +156,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 store.displayName = profile.displayName
                 store.loginId = loginId.trim()
                 val accountNotes = store.loadNotePages()
+                _trashedNotes.value = store.loadTrashedNotePages()
                 calendarTimetableRequestKey = ""
                 calendarTimetableJob?.cancel()
                 calendarTimetableJob = null
@@ -635,10 +640,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun restoreTrashedNote(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
+        val lock = noteMutationLocks.computeIfAbsent(id) { Mutex() }
+        lock.withLock {
+            val trash = store.loadTrashedNotePages()
+            val page = trash.firstOrNull { it.id == id } ?: return@withLock
+            val restored = page.copy(syncState = "PENDING")
+            val active = store.loadNotePages().filterNot { it.id == id } + restored
+            store.saveNotePages(active)
+            store.clearNoteDeleted(id)
+            _state.update { it.copy(notePages = active, pinnedNoteCount = active.count { p -> p.pinned && !p.archived }) }
+            val remaining = trash.filterNot { it.id == id }
+            store.saveTrashedNotePages(remaining)
+            _trashedNotes.value = remaining
+            runCatching { api.saveNote(restored) }
+        }
+        noteMutationLocks.remove(id, lock)
+    }
+
+    fun permanentlyDeleteTrashedNote(id: String) = viewModelScope.launch(Dispatchers.IO) {
+        if (!ensureStartupCollectionsReady()) return@launch
+        val lock = noteMutationLocks.computeIfAbsent(id) { Mutex() }
+        lock.withLock {
+            val remaining = store.loadTrashedNotePages().filterNot { it.id == id }
+            store.saveTrashedNotePages(remaining)
+            _trashedNotes.value = remaining
+        }
+        noteMutationLocks.remove(id, lock)
+    }
+
     fun archiveNotePage(id: String) = viewModelScope.launch(Dispatchers.IO) {
         if (!ensureStartupCollectionsReady()) return@launch
         val lock = noteMutationLocks.computeIfAbsent(id) { Mutex() }
         lock.withLock {
+            val removed = _state.value.notePages.firstOrNull { it.id == id } ?: return@withLock
+            val trash = store.loadTrashedNotePages().filterNot { it.id == id } + removed
+            if (!store.saveTrashedNotePages(trash)) {
+                _state.update { it.copy(message = "휴지통 저장에 실패했습니다. 원본 페이지는 삭제하지 않았습니다.") }
+                return@withLock
+            }
+            _trashedNotes.value = trash
             val next = _state.value.notePages.filterNot { it.id == id }
             store.markNoteDeleted(id)
             store.saveNotePages(next)
@@ -669,6 +711,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         withLocks {
+            val removed = _state.value.notePages.filter { it.id in ids }
+            val trash = store.loadTrashedNotePages().filterNot { it.id in ids } + removed
+            if (!store.saveTrashedNotePages(trash)) {
+                _state.update { it.copy(message = "휴지통 저장에 실패했습니다. 원본 페이지는 삭제하지 않았습니다.") }
+                return@withLocks
+            }
+            _trashedNotes.value = trash
             val next = _state.value.notePages.filterNot { it.id in ids }
             ids.forEach { store.markNoteDeleted(it) }
             store.saveNotePages(next)

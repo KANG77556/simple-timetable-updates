@@ -47,9 +47,20 @@ class TimetableWidget : AppWidgetProvider() {
 
         private fun updateOne(context: Context, manager: AppWidgetManager, appWidgetId: Int) {
             val store = LocalStore(context)
-            val rows = decode(store.latestTimetableJson).sortedBy { it.period }
-            val now = LocalTime.now()
             val today = LocalDate.now().toString()
+            // Use the same account/date-scoped cache as the main timetable screen.
+            // Never display a different account's or yesterday's timetable as today's.
+            val userId = store.userId.trim()
+            val datedCache = if (userId.isNotEmpty()) store.loadTimetableCacheJson(userId, today) else null
+            val datedRows = datedCache?.let(::decode)?.takeIf { rows ->
+                rows.all { it.date == today }
+            }
+            val legacyRows = decode(store.latestTimetableJson).takeIf { rows ->
+                rows.isNotEmpty() && rows.all { it.date == today }
+            }
+            val rows = (datedRows ?: legacyRows ?: emptyList()).sortedBy { it.period }
+            val hasCurrentData = datedRows != null || legacyRows != null
+            val now = LocalTime.now()
             val current = rows.firstOrNull { row ->
                 val start = parseTime(row.startTime)
                 val end = parseTime(row.endTime)
@@ -72,13 +83,13 @@ class TimetableWidget : AppWidgetProvider() {
                     .filter { it.isNotBlank() }.joinToString(" · ")
                 next != null -> "다음 " + listOf("${next.period}교시", next.subject, next.classCode)
                     .filter { it.isNotBlank() }.joinToString(" · ")
-                rows.isEmpty() -> "오늘 수업 없음"
+                rows.isEmpty() -> if (hasCurrentData) "오늘 수업 없음" else "시간표 확인 필요"
                 else -> "오늘 수업 종료"
             }
             val detail = when {
                 current != null -> current.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
                 next != null -> next.room.takeIf { it.isNotBlank() } ?: "교실 미지정"
-                rows.isEmpty() -> "등록된 수업이 없습니다."
+                rows.isEmpty() -> if (hasCurrentData) "등록된 수업이 없습니다." else "앱을 열어 시간표를 새로고침해 주세요."
                 else -> "오늘 일정이 모두 끝났습니다."
             }
 
@@ -135,7 +146,7 @@ class TimetableWidget : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_countdown, View.GONE)
             }
             views.setTextViewText(R.id.widget_detail, detail)
-            views.setTextViewText(R.id.widget_rows, if (timetableText.isBlank()) "등록된 수업이 없습니다." else timetableText)
+            views.setTextViewText(R.id.widget_rows, if (timetableText.isBlank()) (if (hasCurrentData) "등록된 수업이 없습니다." else "앱에서 시간표를 확인해 주세요.") else timetableText)
             views.setTextViewText(R.id.widget_summary, if (summary.isBlank()) "할 일·일정 없음" else summary)
             views.setViewVisibility(R.id.widget_rows, if (compact) View.GONE else View.VISIBLE)
             views.setViewVisibility(R.id.widget_summary, if (minHeight >= 180) View.VISIBLE else View.GONE)

@@ -264,9 +264,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val before = decodeTimetable(store.latestTimetableJson)
         val displayName = _state.value.profile.displayName.ifBlank { store.displayName }
         val rows = timetableApi(request).fetchMyTimetable(request.date, userId, displayName)
-        timetableCache[timetableCacheKey(userId, request.date)] = rows
-        store.saveTimetableCacheJson(userId, request.date, encodeTimetable(rows))
         val applied = timetableRequests.applyIfCurrent(request) {
+            // Only the current request may publish the shared UI/widget cache.
+            // Superseded responses must not overwrite a newer timetable.
+            timetableCache[timetableCacheKey(userId, request.date)] = rows
+            store.saveTimetableCacheJson(userId, request.date, encodeTimetable(rows))
             if (request.date == LocalDate.now().toString()) {
                 val changed = timetableChangedForDate(request.date, before, rows)
                 store.latestTimetableJson = encodeTimetable(rows)

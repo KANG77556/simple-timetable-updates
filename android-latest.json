@@ -1,7 +1,7 @@
 {
-  "versionCode": 90,
-  "versionName": "0.3.84",
-  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.84/MilseongJeil-v0.3.84.apk",
-  "sha256": "696f3cbe0b0aca63a394b1cded58275d370580585950e7512fb0acfd396ad394",
-  "notes": "v0.3.84: 초기 메모·할 일·캘린더 데이터 복원 전 저장을 차단하고 사용자가 선택한 날짜를 유지하도록 수정했습니다."
+  "versionCode": 91,
+  "versionName": "0.3.85",
+  "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/android-v0.3.85/MilseongJeil-v0.3.85.apk",
+  "sha256": "250cee4c21f693b8fa4c4db3d6cb96895951a6d806c8544110c85564505b315b",
+  "notes": "v0.3.85: 홈 화면 위젯의 오늘 시간표 캐시 동기화 및 오래된 요청의 데이터 덮어쓰기를 수정했습니다."
 }

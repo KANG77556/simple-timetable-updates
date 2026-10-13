@@ -109,7 +109,7 @@ jobs:
             gh release create "$TAG" "$RELEASE_APK" \
               --target "$GITHUB_SHA" \
               --title "MilseongJeil-Android-v$VERSION_NAME" \
-              --notes "v$VERSION_NAME: 홈 화면 위젯의 오늘 시간표 캐시 동기화 및 오래된 요청의 데이터 덮어쓰기를 수정했습니다."
+              --notes "v$VERSION_NAME: 전체 및 오늘 시간표에서 동일 과목의 색상이 항상 같도록 수정했습니다."
           fi
 
           cat > ../android-latest.json <<EOF
@@ -118,7 +118,7 @@ jobs:
             "versionName": "$VERSION_NAME",
             "apkUrl": "https://github.com/KANG77556/simple-timetable-updates/releases/download/$TAG/$RELEASE_APK",
             "sha256": "$SHA256",
-            "notes": "v$VERSION_NAME: 홈 화면 위젯의 오늘 시간표 캐시 동기화 및 오래된 요청의 데이터 덮어쓰기를 수정했습니다."
+            "notes": "v$VERSION_NAME: 전체 및 오늘 시간표에서 동일 과목의 색상이 항상 같도록 수정했습니다."
           }
           EOF
 

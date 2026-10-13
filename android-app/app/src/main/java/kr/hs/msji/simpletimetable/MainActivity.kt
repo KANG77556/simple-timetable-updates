@@ -3861,16 +3861,29 @@ private val TIMETABLE_SUBJECT_PALETTE = listOf(
     Color(0xFF6D5BD0), Color(0xFF0F9D8B), Color(0xFFB85A88), Color(0xFF7A6A3E)
 )
 
-internal fun timetableSubjectColorIndexes(subjects: List<String>): Map<String, Int> {
-    val unique = subjects
+// These subject-specific indices must not depend on the current class, week, or visible lessons.
+private val FIXED_TIMETABLE_SUBJECT_COLOR_INDEXES = mapOf(
+    "세실" to 2,
+    "기차" to 1,
+    "기자" to 1,
+    "총무" to 9,
+    "회실" to 10,
+    "전실" to 6,
+    "실국" to 4,
+    "영문" to 5,
+    "진로" to 7,
+    "스생" to 3
+)
+
+internal fun timetableSubjectColorIndexes(subjects: List<String>): Map<String, Int> =
+    subjects.asSequence()
         .map { it.trim() }
         .filter { it.isNotBlank() }
         .distinct()
-        .sortedWith(String.CASE_INSENSITIVE_ORDER)
-    return unique.mapIndexed { index, subject ->
-        subject to (index % TIMETABLE_SUBJECT_PALETTE.size)
-    }.toMap()
-}
+        .associateWith { subject ->
+            FIXED_TIMETABLE_SUBJECT_COLOR_INDEXES[subject]
+                ?: Math.floorMod(subject.hashCode(), TIMETABLE_SUBJECT_PALETTE.size)
+        }
 
 private fun timetableSubjectColors(subjects: List<String>): Map<String, Color> =
     timetableSubjectColorIndexes(subjects).mapValues { (_, index) -> TIMETABLE_SUBJECT_PALETTE[index] }

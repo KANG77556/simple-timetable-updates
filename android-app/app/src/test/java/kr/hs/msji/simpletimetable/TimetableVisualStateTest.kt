@@ -54,6 +54,24 @@ class TimetableVisualStateTest {
         assertEquals(first, second)
         assertEquals(subjects.size, first.values.toSet().size)
     }
+
+    @Test
+    fun subjectColorIndexes_doNotChangeWhenOtherSubjectsAreAddedOrRemoved() {
+        val single = timetableSubjectColorIndexes(listOf("세실", "회실"))
+        val larger = timetableSubjectColorIndexes(listOf("영문", "기차", "총무", "세실", "회실", "전실"))
+        assertEquals(single["세실"], larger["세실"])
+        assertEquals(single["회실"], larger["회실"])
+        assertEquals(2, single["세실"])
+        assertEquals(10, single["회실"])
+    }
+
+    @Test
+    fun subjectColorIndexes_trimNamesAndPreserveNewSubjectColors() {
+        val name = "신규상업과목"
+        val fromOneWeek = timetableSubjectColorIndexes(listOf(" $name ", "세실"))
+        val fromAnotherWeek = timetableSubjectColorIndexes(listOf("전실", name, "총무"))
+        assertEquals(fromOneWeek[name], fromAnotherWeek[name])
+    }
     @Test
     fun noteNumberOrdinal_resetsAfterNonNumberBlock() {
         val blocks = listOf(
